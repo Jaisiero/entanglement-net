@@ -1,0 +1,170 @@
+[protocol]
+version = 1
+max_payload_bytes = 1154
+
+[[message]]
+id = 0x0001
+name = "SessionOpen"
+channel = "reliable"
+direction = "server_to_client"
+fields = [
+  { name = "protocol_version", type = "u16" },
+  { name = "player_id",        type = "u32" },
+  { name = "shard_id",         type = "u32" },
+  { name = "origin_x",         type = "f32" },
+  { name = "origin_z",         type = "f32" },
+  { name = "server_tick",      type = "u32" },
+  { name = "tick_rate_hz",     type = "u16" },
+]
+
+[[message]]
+id = 0x0002
+name = "SessionClose"
+channel = "reliable"
+direction = "bidirectional"
+fields = [
+  { name = "reason", type = "u8" },
+]
+
+[[message]]
+id = 0x0003
+name = "Ping"
+channel = "unreliable"
+direction = "client_to_server"
+fields = [
+  { name = "client_frame",   type = "u32" },
+  { name = "client_time_us", type = "u64" },
+]
+
+[[message]]
+id = 0x0004
+name = "Pong"
+channel = "unreliable"
+direction = "server_to_client"
+fields = [
+  { name = "client_frame",   type = "u32" },
+  { name = "client_time_us", type = "u64" },
+  { name = "server_tick",    type = "u32" },
+  { name = "server_time_us", type = "u64" },
+  { name = "tick_delta_us",  type = "u32" },
+]
+
+[[message]]
+id = 0x0005
+name = "ShardHandoff"
+channel = "reliable"
+direction = "server_to_client"
+fields = [
+  { name = "new_shard_ip_packed", type = "u32" },
+  { name = "new_shard_port",      type = "u16" },
+  { name = "new_shard_id",        type = "u32" },
+  { name = "new_origin_x",        type = "f32" },
+  { name = "new_origin_z",        type = "f32" },
+  { name = "handoff_tick",        type = "u32" },
+]
+
+[[message]]
+id = 0x0100
+name = "EntitySpawn"
+channel = "reliable"
+direction = "server_to_client"
+fields = [
+  { name = "entity_id",       type = "u32" },
+  { name = "entity_type",     type = "u16" },
+  { name = "x",               type = "f32" },
+  { name = "y",               type = "f32" },
+  { name = "z",               type = "f32" },
+  { name = "orientation",     type = "f32" },
+  { name = "initial_state",   type = "u32" },
+]
+
+[[message]]
+id = 0x0101
+name = "EntityDespawn"
+channel = "reliable"
+direction = "server_to_client"
+fields = [
+  { name = "entity_id", type = "u32" },
+  { name = "reason",    type = "u8" },
+]
+
+[[message]]
+id = 0x0102
+name = "EntityMove"
+channel = "unreliable"
+direction = "server_to_client"
+fields = [
+  { name = "entity_id",   type = "u32" },
+  { name = "server_tick", type = "u32" },
+  { name = "x",           type = "f32" },
+  { name = "y",           type = "f32" },
+  { name = "z",           type = "f32" },
+  { name = "orientation", type = "f32" },
+  { name = "vx",          type = "f32" },
+  { name = "vy",          type = "f32" },
+  { name = "vz",          type = "f32" },
+]
+
+[[message]]
+id = 0x0103
+name = "EntityState"
+channel = "reliable"
+direction = "server_to_client"
+fields = [
+  { name = "entity_id",  type = "u32" },
+  { name = "server_tick", type = "u32" },
+  { name = "state_id",   type = "u16" },
+  { name = "param_a",    type = "u32" },
+  { name = "param_b",    type = "u32" },
+]
+
+[[message]]
+id = 0x0104
+name = "EntityHealth"
+channel = "reliable"
+direction = "server_to_client"
+fields = [
+  { name = "entity_id", type = "u32" },
+  { name = "hp",        type = "u32" },
+  { name = "max_hp",    type = "u32" },
+]
+
+[[message]]
+id = 0x0200
+name = "PlayerInput"
+channel = "unreliable"
+direction = "client_to_server"
+fields = [
+  { name = "input_sequence",       type = "u32" },
+  { name = "estimated_server_tick", type = "u32" },
+  { name = "move_x",               type = "f32" },
+  { name = "move_z",               type = "f32" },
+  { name = "orientation",          type = "f32" },
+  { name = "buttons",              type = "u32" },
+]
+
+[[message]]
+id = 0x0201
+name = "PlayerInputBatch"
+channel = "unreliable"
+direction = "client_to_server"
+variable_length = true
+max_entries = 8
+entry_type = "PlayerInput"
+
+[[message]]
+id = 0x0202
+name = "StateAck"
+channel = "unreliable"
+direction = "server_to_client"
+fields = [
+  { name = "input_sequence_acked", type = "u32" },
+  { name = "server_tick",          type = "u32" },
+  { name = "tick_delta_us",        type = "u32" },
+  { name = "x",                    type = "f32" },
+  { name = "y",                    type = "f32" },
+  { name = "z",                    type = "f32" },
+  { name = "vx",                   type = "f32" },
+  { name = "vy",                   type = "f32" },
+  { name = "vz",                   type = "f32" },
+]

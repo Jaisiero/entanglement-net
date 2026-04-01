@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "codegen",
+    "entanglement-net",
+]
+resolver = "2"
