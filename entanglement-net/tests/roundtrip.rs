@@ -1,4 +1,4 @@
-use entanglement_net::batch::{BatchReader, BatchWriter};
+use entanglement_net::batch::{BatchReader, BatchWriter, read_msg};
 use entanglement_net::messages::*;
 
 /// Helper to safely read msg_type from a packed MsgHeader
@@ -26,7 +26,7 @@ fn test_entity_move_roundtrip() {
     let mut buf = [0u8; 512];
     let written = {
         let mut writer = BatchWriter::new(&mut buf);
-        writer.write(msg_type::ENTITY_MOVE, &msg_out).unwrap();
+        writer.write_msg(msg_type::ENTITY_MOVE, &msg_out).unwrap();
         writer.bytes_written()
     };
 
@@ -36,9 +36,7 @@ fn test_entity_move_roundtrip() {
         assert_eq!(hdr_type(&header), msg_type::ENTITY_MOVE);
         assert_eq!(hdr_len(&header) as usize, core::mem::size_of::<EntityMove>());
 
-        let msg_in = unsafe {
-            core::ptr::read_unaligned(payload.as_ptr() as *const EntityMove)
-        };
+        let msg_in: EntityMove = read_msg(payload).unwrap();
         assert_eq!(msg_in, msg_out);
     }
 }
@@ -58,16 +56,14 @@ fn test_session_open_roundtrip() {
     let mut buf = [0u8; 128];
     let written = {
         let mut writer = BatchWriter::new(&mut buf);
-        writer.write(msg_type::SESSION_OPEN, &msg_out).unwrap();
+        writer.write_msg(msg_type::SESSION_OPEN, &msg_out).unwrap();
         writer.bytes_written()
     };
 
     let reader = BatchReader::new(&buf[..written]);
     let (header, payload) = reader.into_iter().next().unwrap().unwrap();
     assert_eq!(hdr_type(&header), msg_type::SESSION_OPEN);
-    let msg_in = unsafe {
-        core::ptr::read_unaligned(payload.as_ptr() as *const SessionOpen)
-    };
+    let msg_in: SessionOpen = read_msg(payload).unwrap();
     assert_eq!(msg_in, msg_out);
 }
 
@@ -82,7 +78,7 @@ fn test_batch_multiple_messages() {
             vx: 0.0, vy: 0.0, vz: 0.0,
         };
         let mut count = 0;
-        while writer.write(msg_type::ENTITY_MOVE, &msg).is_ok() {
+        while writer.write_msg(msg_type::ENTITY_MOVE, &msg).is_ok() {
             count += 1;
         }
         (count, writer.bytes_written())
@@ -105,17 +101,17 @@ fn test_mixed_batch() {
         entity_id: 10, entity_type: 1,
         x: 50.0, y: 0.0, z: -30.0, orientation: 0.0, initial_state: 0,
     };
-    writer.write(msg_type::ENTITY_SPAWN, &spawn).unwrap();
+    writer.write_msg(msg_type::ENTITY_SPAWN, &spawn).unwrap();
 
     let mv = EntityMove {
         entity_id: 10, server_tick: 1,
         x: 51.0, y: 0.0, z: -30.0, orientation: 0.1,
         vx: 1.0, vy: 0.0, vz: 0.0,
     };
-    writer.write(msg_type::ENTITY_MOVE, &mv).unwrap();
+    writer.write_msg(msg_type::ENTITY_MOVE, &mv).unwrap();
 
     let health = EntityHealth { entity_id: 10, hp: 100, max_hp: 100 };
-    writer.write(msg_type::ENTITY_HEALTH, &health).unwrap();
+    writer.write_msg(msg_type::ENTITY_HEALTH, &health).unwrap();
 
     assert_eq!(writer.message_count(), 3);
 
@@ -142,11 +138,10 @@ fn test_player_input_batch_variable_length() {
     let payload = read_player_input_batch(&buf[..written]).unwrap();
     assert_eq!(payload.len(), 3 * core::mem::size_of::<PlayerInput>());
 
+    // read_msg handles from_wire conversion for each entry
     let entry_size = core::mem::size_of::<PlayerInput>();
     for i in 0..3 {
-        let input = unsafe {
-            core::ptr::read_unaligned(payload[i * entry_size..].as_ptr() as *const PlayerInput)
-        };
+        let input: PlayerInput = read_msg(&payload[i * entry_size..]).unwrap();
         assert_eq!(input, inputs[i]);
     }
 }
@@ -191,7 +186,7 @@ fn test_batch_full_error() {
         x: 0.0, y: 0.0, z: 0.0, orientation: 0.0,
         vx: 0.0, vy: 0.0, vz: 0.0,
     };
-    assert!(writer.write(msg_type::ENTITY_MOVE, &msg).is_err());
+    assert!(writer.write_msg(msg_type::ENTITY_MOVE, &msg).is_err());
 }
 
 #[test]
@@ -203,13 +198,14 @@ fn test_empty_batch() {
 
 #[test]
 fn test_malformed_batch() {
+    // Manually write a LE header claiming 100 bytes, but buffer only 10
     let mut buf = [0u8; 10];
     let header = MsgHeader {
         msg_type: msg_type::ENTITY_MOVE,
         msg_length: 100,
         msg_flags: 0,
         reserved: 0,
-    };
+    }.to_wire();
     unsafe {
         core::ptr::write_unaligned(buf.as_mut_ptr() as *mut MsgHeader, header);
     }
@@ -242,7 +238,7 @@ fn test_dispatcher_routes_messages() {
             vx: 0.0, vy: 0.0, vz: 0.0,
         };
         for _ in 0..3 {
-            writer.write(msg_type::ENTITY_MOVE, &msg).unwrap();
+            writer.write_msg(msg_type::ENTITY_MOVE, &msg).unwrap();
         }
         writer.bytes_written()
     };
@@ -260,7 +256,6 @@ fn test_dispatcher_unknown_type() {
     let dispatcher = Dispatcher::new();
     let header = MsgHeader { msg_type: 0xFFFF, msg_length: 0, msg_flags: 0, reserved: 0 };
     let ctx = MessageContext { sender_id: 1, server_tick: 0, timestamp_us: 0 };
-    // dispatch takes header by value (Copy), no packed field ref issue
     assert!(dispatcher.dispatch(&header, &[], &ctx).is_err());
 }
 
@@ -277,4 +272,97 @@ fn test_session_coordinate_transform() {
     let (world_x, world_z) = session.wire_to_world(wx, wz);
     assert!((world_x - 1050.0).abs() < 0.01);
     assert!((world_z - 2100.0).abs() < 0.01);
+}
+
+/// Verify the wire format is explicitly little-endian at the byte level.
+/// This test would catch a broken to_wire() on a big-endian platform.
+#[test]
+fn test_wire_format_is_little_endian() {
+    // Write an EntityHealth with known values via write_msg (LE conversion)
+    let msg = EntityHealth { entity_id: 0x01020304, hp: 0x05060708, max_hp: 0x090A0B0C };
+
+    let mut buf = [0u8; 64];
+    let written = {
+        let mut writer = BatchWriter::new(&mut buf);
+        writer.write_msg(msg_type::ENTITY_HEALTH, &msg).unwrap();
+        writer.bytes_written()
+    };
+    assert_eq!(written, 6 + 12); // header + payload
+
+    // ── Verify header bytes (LE) ──
+    // msg_type: ENTITY_HEALTH = 0x0104 → LE bytes: [0x04, 0x01]
+    assert_eq!(buf[0], 0x04);
+    assert_eq!(buf[1], 0x01);
+    // msg_length: 12 = 0x000C → LE bytes: [0x0C, 0x00]
+    assert_eq!(buf[2], 0x0C);
+    assert_eq!(buf[3], 0x00);
+    // msg_flags: 0, reserved: 0
+    assert_eq!(buf[4], 0x00);
+    assert_eq!(buf[5], 0x00);
+
+    // ── Verify payload bytes (LE) ──
+    // entity_id: 0x01020304 → LE: [04, 03, 02, 01]
+    assert_eq!(&buf[6..10], &[0x04, 0x03, 0x02, 0x01]);
+    // hp: 0x05060708 → LE: [08, 07, 06, 05]
+    assert_eq!(&buf[10..14], &[0x08, 0x07, 0x06, 0x05]);
+    // max_hp: 0x090A0B0C → LE: [0C, 0B, 0A, 09]
+    assert_eq!(&buf[14..18], &[0x0C, 0x0B, 0x0A, 0x09]);
+
+    // ── Verify round-trip via read_msg recovers original values ──
+    let reader = BatchReader::new(&buf[..written]);
+    let (_, payload) = reader.into_iter().next().unwrap().unwrap();
+    let recovered: EntityHealth = read_msg(payload).unwrap();
+    assert_eq!(recovered, msg);
+}
+
+/// Verify f32 fields are stored as LE IEEE 754 bits on the wire.
+#[test]
+fn test_wire_format_float_le() {
+    // f32 1.0 = 0x3F800000 → LE bytes: [00, 00, 80, 3F]
+    let msg = EntityMove {
+        entity_id: 1, server_tick: 2,
+        x: 1.0, y: 0.0, z: 0.0, orientation: 0.0,
+        vx: 0.0, vy: 0.0, vz: 0.0,
+    };
+
+    let mut buf = [0u8; 64];
+    let written = {
+        let mut writer = BatchWriter::new(&mut buf);
+        writer.write_msg(msg_type::ENTITY_MOVE, &msg).unwrap();
+        writer.bytes_written()
+    };
+
+    // x field starts at offset 6 (header) + 4 (entity_id) + 4 (server_tick) = 14
+    assert_eq!(&buf[14..18], &[0x00, 0x00, 0x80, 0x3F], "f32 1.0 should be LE 0x3F800000");
+
+    // Full round-trip
+    let reader = BatchReader::new(&buf[..written]);
+    let (_, payload) = reader.into_iter().next().unwrap().unwrap();
+    let recovered: EntityMove = read_msg(payload).unwrap();
+    assert_eq!(recovered, msg);
+}
+
+/// Verify u64 fields are LE on the wire.
+#[test]
+fn test_wire_format_u64_le() {
+    let msg = Ping { client_frame: 1, client_time_us: 0x0102030405060708 };
+
+    let mut buf = [0u8; 32];
+    let written = {
+        let mut writer = BatchWriter::new(&mut buf);
+        writer.write_msg(msg_type::PING, &msg).unwrap();
+        writer.bytes_written()
+    };
+
+    // client_time_us at offset 6 + 4 = 10, 8 bytes
+    assert_eq!(
+        &buf[10..18],
+        &[0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01],
+        "u64 should be LE"
+    );
+
+    let reader = BatchReader::new(&buf[..written]);
+    let (_, payload) = reader.into_iter().next().unwrap().unwrap();
+    let recovered: Ping = read_msg(payload).unwrap();
+    assert_eq!(recovered, msg);
 }

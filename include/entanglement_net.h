@@ -1,7 +1,27 @@
+/* AUTO-GENERATED — do not edit manually */
+/* Source: schemas/messages.toml              */
+/*                                            */
+/* Wire format: all multi-byte fields are LITTLE-ENDIAN.  */
+/* Use ent_net_htole* / ent_net_letoh* macros to convert. */
+
 #ifndef ENTANGLEMENT_NET_H
 #define ENTANGLEMENT_NET_H
 
 #include <stdint.h>
+
+/* ── Little-endian conversion helpers ─────────────────── */
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+  #define ENT_NET_HTOLE16(x) __builtin_bswap16(x)
+  #define ENT_NET_HTOLE32(x) __builtin_bswap32(x)
+  #define ENT_NET_HTOLE64(x) __builtin_bswap64(x)
+#else
+  #define ENT_NET_HTOLE16(x) (x)
+  #define ENT_NET_HTOLE32(x) (x)
+  #define ENT_NET_HTOLE64(x) (x)
+#endif
+#define ENT_NET_LETOH16(x) ENT_NET_HTOLE16(x)
+#define ENT_NET_LETOH32(x) ENT_NET_HTOLE32(x)
+#define ENT_NET_LETOH64(x) ENT_NET_HTOLE64(x)
 
 #define ENT_NET_PROTOCOL_VERSION 1
 #define ENT_NET_MSG_HEADER_SIZE 6

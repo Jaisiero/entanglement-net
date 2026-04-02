@@ -92,12 +92,40 @@ fn c_type(ty: &str) -> &str {
 // Rust code generation
 // ---------------------------------------------------------------------------
 
+/// Generate the Rust expression to convert a native field value to little-endian wire format.
+fn to_wire_expr(field_name: &str, ty: &str) -> String {
+    match ty {
+        "u8" => format!("self.{}", field_name),
+        "u16" | "u32" | "u64" => format!("self.{}.to_le()", field_name),
+        "f32" => format!("f32::from_bits(self.{}.to_bits().to_le())", field_name),
+        "f64" => format!("f64::from_bits(self.{}.to_bits().to_le())", field_name),
+        _ => panic!("Unknown type for LE conversion: {}", ty),
+    }
+}
+
+/// Generate the Rust expression to convert a little-endian wire field to native format.
+fn from_wire_expr(field_name: &str, ty: &str) -> String {
+    match ty {
+        "u8" => format!("self.{}", field_name),
+        "u16" => format!("u16::from_le(self.{})", field_name),
+        "u32" => format!("u32::from_le(self.{})", field_name),
+        "u64" => format!("u64::from_le(self.{})", field_name),
+        "f32" => format!("f32::from_bits(u32::from_le(self.{}.to_bits()))", field_name),
+        "f64" => format!("f64::from_bits(u64::from_le(self.{}.to_bits()))", field_name),
+        _ => panic!("Unknown type for LE conversion: {}", ty),
+    }
+}
+
 fn generate_rust(schema: &Schema) -> String {
     let mut out = String::new();
 
     // File header
     out.push_str("// AUTO-GENERATED — do not edit manually\n");
-    out.push_str("// Source: schemas/messages.toml\n\n");
+    out.push_str("// Source: schemas/messages.toml\n");
+    out.push_str("//\n");
+    out.push_str("// Wire format: all multi-byte fields are LITTLE-ENDIAN.\n");
+    out.push_str("// Use WireMessage::to_wire() before sending and WireMessage::from_wire() after receiving\n");
+    out.push_str("// to ensure correct byte order on all platforms (x86, ARM, big-endian, etc.).\n\n");
 
     // Protocol constants
     out.push_str(&format!(
@@ -109,6 +137,16 @@ fn generate_rust(schema: &Schema) -> String {
         "pub const MAX_PAYLOAD_BYTES: usize = {};\n",
         schema.protocol.max_payload_bytes
     ));
+
+    // WireMessage trait
+    out.push_str("\n/// Trait for converting between native and little-endian wire format.\n");
+    out.push_str("/// On little-endian platforms (x86, ARM LE), these are compiled to no-ops.\n");
+    out.push_str("pub trait WireMessage: Copy {\n");
+    out.push_str("    /// Convert from native byte order to little-endian wire format.\n");
+    out.push_str("    fn to_wire(self) -> Self;\n");
+    out.push_str("    /// Convert from little-endian wire format to native byte order.\n");
+    out.push_str("    fn from_wire(self) -> Self;\n");
+    out.push_str("}\n");
 
     // msg_type module
     out.push_str("\npub mod msg_type {\n");
@@ -129,6 +167,26 @@ fn generate_rust(schema: &Schema) -> String {
     out.push_str("    pub msg_length: u16,\n");
     out.push_str("    pub msg_flags: u8,\n");
     out.push_str("    pub reserved: u8,\n");
+    out.push_str("}\n");
+
+    // WireMessage impl for MsgHeader
+    out.push_str("\nimpl WireMessage for MsgHeader {\n");
+    out.push_str("    fn to_wire(self) -> Self {\n");
+    out.push_str("        Self {\n");
+    out.push_str("            msg_type: self.msg_type.to_le(),\n");
+    out.push_str("            msg_length: self.msg_length.to_le(),\n");
+    out.push_str("            msg_flags: self.msg_flags,\n");
+    out.push_str("            reserved: self.reserved,\n");
+    out.push_str("        }\n");
+    out.push_str("    }\n");
+    out.push_str("    fn from_wire(self) -> Self {\n");
+    out.push_str("        Self {\n");
+    out.push_str("            msg_type: u16::from_le(self.msg_type),\n");
+    out.push_str("            msg_length: u16::from_le(self.msg_length),\n");
+    out.push_str("            msg_flags: self.msg_flags,\n");
+    out.push_str("            reserved: self.reserved,\n");
+    out.push_str("        }\n");
+    out.push_str("    }\n");
     out.push_str("}\n");
 
     // Per-message output
@@ -152,9 +210,9 @@ fn generate_rust(schema: &Schema) -> String {
                 screaming, max
             ));
 
-            // write function
+            // write function — converts each entry to wire format
             out.push_str(&format!(
-                "\n/// Write a {} into a buffer. Returns bytes written.\n",
+                "\n/// Write a {} into a buffer (little-endian). Returns bytes written.\n",
                 msg.name
             ));
             out.push_str(&format!(
@@ -169,7 +227,7 @@ fn generate_rust(schema: &Schema) -> String {
                 "    let entry_size = core::mem::size_of::<{}>();\n",
                 entry_type
             ));
-            out.push_str("    let total = 1 + count * entry_size; // 1 byte count + entries\n");
+            out.push_str("    let total = 1 + count * entry_size;\n");
             out.push_str("    if total > buf.len() { return Err(()); }\n");
             out.push_str("    buf[0] = count as u8;\n");
             out.push_str("    for i in 0..count {\n");
@@ -179,16 +237,16 @@ fn generate_rust(schema: &Schema) -> String {
                 "                buf[1 + i * entry_size..].as_mut_ptr() as *mut {},\n",
                 entry_type
             ));
-            out.push_str("                inputs[i],\n");
+            out.push_str("                inputs[i].to_wire(),\n");
             out.push_str("            );\n");
             out.push_str("        }\n");
             out.push_str("    }\n");
             out.push_str("    Ok(total)\n");
             out.push_str("}\n");
 
-            // read function
+            // read function — returns wire bytes; caller uses from_wire() on each entry
             out.push_str(&format!(
-                "\n/// Read a {} from a buffer.\n",
+                "\n/// Read a {} from a buffer (raw LE bytes). Use WireMessage::from_wire() on each entry.\n",
                 msg.name
             ));
             out.push_str(&format!(
@@ -218,6 +276,37 @@ fn generate_rust(schema: &Schema) -> String {
                 ));
             }
             out.push_str("}\n");
+
+            // WireMessage impl
+            out.push_str(&format!("\nimpl WireMessage for {} {{\n", msg.name));
+
+            // to_wire
+            out.push_str("    fn to_wire(self) -> Self {\n");
+            out.push_str("        Self {\n");
+            for field in &msg.fields {
+                out.push_str(&format!(
+                    "            {}: {},\n",
+                    field.name,
+                    to_wire_expr(&field.name, &field.ty)
+                ));
+            }
+            out.push_str("        }\n");
+            out.push_str("    }\n");
+
+            // from_wire
+            out.push_str("    fn from_wire(self) -> Self {\n");
+            out.push_str("        Self {\n");
+            for field in &msg.fields {
+                out.push_str(&format!(
+                    "            {}: {},\n",
+                    field.name,
+                    from_wire_expr(&field.name, &field.ty)
+                ));
+            }
+            out.push_str("        }\n");
+            out.push_str("    }\n");
+
+            out.push_str("}\n");
         }
     }
 
@@ -244,9 +333,29 @@ fn generate_c(schema: &Schema) -> String {
     let mut out = String::new();
 
     // Header guard
+    out.push_str("/* AUTO-GENERATED — do not edit manually */\n");
+    out.push_str("/* Source: schemas/messages.toml              */\n");
+    out.push_str("/*                                            */\n");
+    out.push_str("/* Wire format: all multi-byte fields are LITTLE-ENDIAN.  */\n");
+    out.push_str("/* Use ent_net_htole* / ent_net_letoh* macros to convert. */\n\n");
     out.push_str("#ifndef ENTANGLEMENT_NET_H\n");
     out.push_str("#define ENTANGLEMENT_NET_H\n\n");
     out.push_str("#include <stdint.h>\n\n");
+
+    // LE conversion macros
+    out.push_str("/* ── Little-endian conversion helpers ─────────────────── */\n");
+    out.push_str("#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__\n");
+    out.push_str("  #define ENT_NET_HTOLE16(x) __builtin_bswap16(x)\n");
+    out.push_str("  #define ENT_NET_HTOLE32(x) __builtin_bswap32(x)\n");
+    out.push_str("  #define ENT_NET_HTOLE64(x) __builtin_bswap64(x)\n");
+    out.push_str("#else\n");
+    out.push_str("  #define ENT_NET_HTOLE16(x) (x)\n");
+    out.push_str("  #define ENT_NET_HTOLE32(x) (x)\n");
+    out.push_str("  #define ENT_NET_HTOLE64(x) (x)\n");
+    out.push_str("#endif\n");
+    out.push_str("#define ENT_NET_LETOH16(x) ENT_NET_HTOLE16(x)\n");
+    out.push_str("#define ENT_NET_LETOH32(x) ENT_NET_HTOLE32(x)\n");
+    out.push_str("#define ENT_NET_LETOH64(x) ENT_NET_HTOLE64(x)\n\n");
 
     // Protocol defines
     out.push_str(&format!(
