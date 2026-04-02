@@ -3,7 +3,7 @@
 /// (see channel_manager.h `namespace channels`).
 pub mod channel {
     /// Control channel — RELIABLE_ORDERED, priority 255.
-    /// SessionOpen, SessionClose, ShardHandoff.
+    /// SessionClose, ShardHandoff.  **Not for app-layer data.**
     pub const CONTROL:              u8 = 0;
     /// Unreliable — positions, StateAck, pings, PlayerMove.
     /// High frequency, loss tolerated, no ordering guarantee.
@@ -12,7 +12,7 @@ pub mod channel {
     /// Guaranteed delivery, no ordering guarantee.
     pub const RELIABLE:             u8 = 2;
     /// Ordered — RELIABLE_ORDERED, priority 128.
-    /// Reserved; prefer UNRELIABLE + sequence or RELIABLE.
+    /// SessionOpen and other ordered app-layer messages.
     pub const ORDERED:              u8 = 3;
     /// Unreliable coalesced — batched position updates.
     pub const UNRELIABLE_COALESCED: u8 = 4;
