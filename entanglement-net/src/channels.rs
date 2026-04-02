@@ -8,11 +8,11 @@ pub mod channel {
     /// Unreliable — positions, StateAck, pings, PlayerMove.
     /// High frequency, loss tolerated, no ordering guarantee.
     pub const UNRELIABLE:           u8 = 1;
-    /// Reliable — spawn, despawn, PlayerAction, events.
-    /// Guaranteed delivery, no ordering guarantee.
+    /// Reliable — spawn, despawn, PlayerAction, SessionOpen, events.
+    /// Guaranteed delivery, no ordering guarantee (no head-of-line blocking).
     pub const RELIABLE:             u8 = 2;
     /// Ordered — RELIABLE_ORDERED, priority 128.
-    /// SessionOpen and other ordered app-layer messages.
+    /// Ordered app-layer messages.
     pub const ORDERED:              u8 = 3;
     /// Unreliable coalesced — batched position updates.
     pub const UNRELIABLE_COALESCED: u8 = 4;
