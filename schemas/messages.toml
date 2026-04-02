@@ -1,11 +1,15 @@
 [protocol]
-version = 1
+version = 2
 max_payload_bytes = 1154
+
+# ─────────────────────────────────────────────
+# SYSTEM MESSAGES (0x0001 - 0x00FF)
+# ─────────────────────────────────────────────
 
 [[message]]
 id = 0x0001
 name = "SessionOpen"
-channel = "reliable"
+channel = "control"
 direction = "server_to_client"
 fields = [
   { name = "protocol_version", type = "u16" },
@@ -20,7 +24,7 @@ fields = [
 [[message]]
 id = 0x0002
 name = "SessionClose"
-channel = "reliable"
+channel = "control"
 direction = "bidirectional"
 fields = [
   { name = "reason", type = "u8" },
@@ -52,7 +56,7 @@ fields = [
 [[message]]
 id = 0x0005
 name = "ShardHandoff"
-channel = "reliable"
+channel = "control"
 direction = "server_to_client"
 fields = [
   { name = "new_shard_ip_packed", type = "u32" },
@@ -62,6 +66,10 @@ fields = [
   { name = "new_origin_z",        type = "f32" },
   { name = "handoff_tick",        type = "u32" },
 ]
+
+# ─────────────────────────────────────────────
+# ENTITY MESSAGES (0x0100 - 0x01FF)
+# ─────────────────────────────────────────────
 
 [[message]]
 id = 0x0100
@@ -129,31 +137,63 @@ fields = [
   { name = "max_hp",    type = "u32" },
 ]
 
+# ─────────────────────────────────────────────
+# INPUT MESSAGES (0x0200 - 0x02FF)
+# ─────────────────────────────────────────────
+
+# Continuous movement — UNRELIABLE channel 1
+# High frequency (30Hz), loss tolerated.
+# Order guaranteed via input_sequence on the server.
+# Redundancy (PlayerMoveBatch) recovers lost packets.
 [[message]]
 id = 0x0200
-name = "PlayerInput"
+name = "PlayerMove"
 channel = "unreliable"
 direction = "client_to_server"
 fields = [
-  { name = "input_sequence",       type = "u32" },
+  { name = "input_sequence",        type = "u32" },
   { name = "estimated_server_tick", type = "u32" },
   { name = "move_x",               type = "f32" },
   { name = "move_z",               type = "f32" },
   { name = "orientation",          type = "f32" },
-  { name = "buttons",              type = "u32" },
 ]
 
+# Batch with redundancy — last N PlayerMove per packet
+# Recovers losses without head-of-line blocking
 [[message]]
 id = 0x0201
-name = "PlayerInputBatch"
+name = "PlayerMoveBatch"
 channel = "unreliable"
 direction = "client_to_server"
 variable_length = true
 max_entries = 8
-entry_type = "PlayerInput"
+entry_type = "PlayerMove"
 
+# Discrete actions — RELIABLE channel 2
+# Low frequency (jump, attack, dodge, ability).
+# Cannot be lost — unique, unrepeatable events.
+# input_sequence detects duplicates on retransmission.
 [[message]]
 id = 0x0202
+name = "PlayerAction"
+channel = "reliable"
+direction = "client_to_server"
+fields = [
+  { name = "input_sequence", type = "u32" },
+  { name = "server_tick",    type = "u32" },
+  { name = "action_type",    type = "u8"  },
+  { name = "pad_a",          type = "u8"  },
+  { name = "pad_b",          type = "u8"  },
+  { name = "pad_c",          type = "u8"  },
+  { name = "param_a",        type = "u32" },
+  { name = "param_b",        type = "u32" },
+]
+
+# StateAck — UNRELIABLE channel 1
+# Authoritative server position sent to client.
+# If lost, the next one replaces it.
+[[message]]
+id = 0x0203
 name = "StateAck"
 channel = "unreliable"
 direction = "server_to_client"

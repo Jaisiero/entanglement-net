@@ -23,7 +23,7 @@
 #define ENT_NET_LETOH32(x) ENT_NET_HTOLE32(x)
 #define ENT_NET_LETOH64(x) ENT_NET_HTOLE64(x)
 
-#define ENT_NET_PROTOCOL_VERSION 1
+#define ENT_NET_PROTOCOL_VERSION 2
 #define ENT_NET_MSG_HEADER_SIZE 6
 #define ENT_NET_MAX_PAYLOAD_BYTES 1154
 
@@ -37,9 +37,10 @@
 #define ENT_NET_MSG_ENTITY_MOVE 0x0102
 #define ENT_NET_MSG_ENTITY_STATE 0x0103
 #define ENT_NET_MSG_ENTITY_HEALTH 0x0104
-#define ENT_NET_MSG_PLAYER_INPUT 0x0200
-#define ENT_NET_MSG_PLAYER_INPUT_BATCH 0x0201
-#define ENT_NET_MSG_STATE_ACK 0x0202
+#define ENT_NET_MSG_PLAYER_MOVE 0x0200
+#define ENT_NET_MSG_PLAYER_MOVE_BATCH 0x0201
+#define ENT_NET_MSG_PLAYER_ACTION 0x0202
+#define ENT_NET_MSG_STATE_ACK 0x0203
 
 #pragma pack(push, 1)
 
@@ -133,8 +134,18 @@ typedef struct {
     float move_x;
     float move_z;
     float orientation;
-    uint32_t buttons;
-} ent_net_player_input_t;
+} ent_net_player_move_t;
+
+typedef struct {
+    uint32_t input_sequence;
+    uint32_t server_tick;
+    uint8_t action_type;
+    uint8_t pad_a;
+    uint8_t pad_b;
+    uint8_t pad_c;
+    uint32_t param_a;
+    uint32_t param_b;
+} ent_net_player_action_t;
 
 typedef struct {
     uint32_t input_sequence_acked;
@@ -171,7 +182,8 @@ ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_despawn_t) == 5, "EntityDespawn size
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_move_t) == 36, "EntityMove size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_state_t) == 18, "EntityState size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_health_t) == 12, "EntityHealth size");
-ENT_NET_STATIC_ASSERT(sizeof(ent_net_player_input_t) == 24, "PlayerInput size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_player_move_t) == 20, "PlayerMove size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_player_action_t) == 20, "PlayerAction size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_state_ack_t) == 36, "StateAck size");
 
 #endif /* ENTANGLEMENT_NET_H */

@@ -5,7 +5,7 @@
 // Use WireMessage::to_wire() before sending and WireMessage::from_wire() after receiving
 // to ensure correct byte order on all platforms (x86, ARM, big-endian, etc.).
 
-pub const PROTOCOL_VERSION: u16 = 1;
+pub const PROTOCOL_VERSION: u16 = 2;
 pub const MSG_HEADER_SIZE: usize = 6;
 pub const MAX_PAYLOAD_BYTES: usize = 1154;
 
@@ -29,9 +29,10 @@ pub mod msg_type {
     pub const ENTITY_MOVE: u16 = 0x0102;
     pub const ENTITY_STATE: u16 = 0x0103;
     pub const ENTITY_HEALTH: u16 = 0x0104;
-    pub const PLAYER_INPUT: u16 = 0x0200;
-    pub const PLAYER_INPUT_BATCH: u16 = 0x0201;
-    pub const STATE_ACK: u16 = 0x0202;
+    pub const PLAYER_MOVE: u16 = 0x0200;
+    pub const PLAYER_MOVE_BATCH: u16 = 0x0201;
+    pub const PLAYER_ACTION: u16 = 0x0202;
+    pub const STATE_ACK: u16 = 0x0203;
 }
 
 #[repr(C, packed)]
@@ -365,16 +366,15 @@ impl WireMessage for EntityHealth {
 
 #[repr(C, packed)]
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct PlayerInput {
+pub struct PlayerMove {
     pub input_sequence: u32,
     pub estimated_server_tick: u32,
     pub move_x: f32,
     pub move_z: f32,
     pub orientation: f32,
-    pub buttons: u32,
 }
 
-impl WireMessage for PlayerInput {
+impl WireMessage for PlayerMove {
     fn to_wire(self) -> Self {
         Self {
             input_sequence: self.input_sequence.to_le(),
@@ -382,7 +382,6 @@ impl WireMessage for PlayerInput {
             move_x: f32::from_bits(self.move_x.to_bits().to_le()),
             move_z: f32::from_bits(self.move_z.to_bits().to_le()),
             orientation: f32::from_bits(self.orientation.to_bits().to_le()),
-            buttons: self.buttons.to_le(),
         }
     }
     fn from_wire(self) -> Self {
@@ -392,26 +391,25 @@ impl WireMessage for PlayerInput {
             move_x: f32::from_bits(u32::from_le(self.move_x.to_bits())),
             move_z: f32::from_bits(u32::from_le(self.move_z.to_bits())),
             orientation: f32::from_bits(u32::from_le(self.orientation.to_bits())),
-            buttons: u32::from_le(self.buttons),
         }
     }
 }
 
-/// Variable-length batch: count (u8) + count × PlayerInput
+/// Variable-length batch: count (u8) + count × PlayerMove
 /// Max entries: 8
-pub const PLAYER_INPUT_BATCH_MAX_ENTRIES: usize = 8;
+pub const PLAYER_MOVE_BATCH_MAX_ENTRIES: usize = 8;
 
-/// Write a PlayerInputBatch into a buffer (little-endian). Returns bytes written.
-pub fn write_player_input_batch(buf: &mut [u8], inputs: &[PlayerInput]) -> Result<usize, ()> {
-    let count = inputs.len().min(PLAYER_INPUT_BATCH_MAX_ENTRIES);
-    let entry_size = core::mem::size_of::<PlayerInput>();
+/// Write a PlayerMoveBatch into a buffer (little-endian). Returns bytes written.
+pub fn write_player_move_batch(buf: &mut [u8], inputs: &[PlayerMove]) -> Result<usize, ()> {
+    let count = inputs.len().min(PLAYER_MOVE_BATCH_MAX_ENTRIES);
+    let entry_size = core::mem::size_of::<PlayerMove>();
     let total = 1 + count * entry_size;
     if total > buf.len() { return Err(()); }
     buf[0] = count as u8;
     for i in 0..count {
         unsafe {
             core::ptr::write_unaligned(
-                buf[1 + i * entry_size..].as_mut_ptr() as *mut PlayerInput,
+                buf[1 + i * entry_size..].as_mut_ptr() as *mut PlayerMove,
                 inputs[i].to_wire(),
             );
         }
@@ -419,14 +417,54 @@ pub fn write_player_input_batch(buf: &mut [u8], inputs: &[PlayerInput]) -> Resul
     Ok(total)
 }
 
-/// Read a PlayerInputBatch from a buffer (raw LE bytes). Use WireMessage::from_wire() on each entry.
-pub fn read_player_input_batch(payload: &[u8]) -> Option<&[u8]> {
+/// Read a PlayerMoveBatch from a buffer (raw LE bytes). Use WireMessage::from_wire() on each entry.
+pub fn read_player_move_batch(payload: &[u8]) -> Option<&[u8]> {
     if payload.is_empty() { return None; }
     let count = payload[0] as usize;
-    let entry_size = core::mem::size_of::<PlayerInput>();
+    let entry_size = core::mem::size_of::<PlayerMove>();
     let total = 1 + count * entry_size;
     if total > payload.len() { return None; }
     Some(&payload[1..total])
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PlayerAction {
+    pub input_sequence: u32,
+    pub server_tick: u32,
+    pub action_type: u8,
+    pub pad_a: u8,
+    pub pad_b: u8,
+    pub pad_c: u8,
+    pub param_a: u32,
+    pub param_b: u32,
+}
+
+impl WireMessage for PlayerAction {
+    fn to_wire(self) -> Self {
+        Self {
+            input_sequence: self.input_sequence.to_le(),
+            server_tick: self.server_tick.to_le(),
+            action_type: self.action_type,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+            param_a: self.param_a.to_le(),
+            param_b: self.param_b.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            input_sequence: u32::from_le(self.input_sequence),
+            server_tick: u32::from_le(self.server_tick),
+            action_type: self.action_type,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+            param_a: u32::from_le(self.param_a),
+            param_b: u32::from_le(self.param_b),
+        }
+    }
 }
 
 #[repr(C, packed)]
@@ -483,5 +521,6 @@ const _: () = assert!(core::mem::size_of::<EntityDespawn>() == 5);
 const _: () = assert!(core::mem::size_of::<EntityMove>() == 36);
 const _: () = assert!(core::mem::size_of::<EntityState>() == 18);
 const _: () = assert!(core::mem::size_of::<EntityHealth>() == 12);
-const _: () = assert!(core::mem::size_of::<PlayerInput>() == 24);
+const _: () = assert!(core::mem::size_of::<PlayerMove>() == 20);
+const _: () = assert!(core::mem::size_of::<PlayerAction>() == 20);
 const _: () = assert!(core::mem::size_of::<StateAck>() == 36);

@@ -124,38 +124,37 @@ fn test_mixed_batch() {
 }
 
 #[test]
-fn test_player_input_batch_variable_length() {
+fn test_player_move_batch_variable_length() {
     let inputs = [
-        PlayerInput { input_sequence: 1, estimated_server_tick: 100, move_x: 1.0, move_z: 0.0, orientation: 0.0, buttons: 0 },
-        PlayerInput { input_sequence: 2, estimated_server_tick: 101, move_x: 0.5, move_z: 0.5, orientation: 1.0, buttons: 1 },
-        PlayerInput { input_sequence: 3, estimated_server_tick: 102, move_x: 0.0, move_z: 1.0, orientation: 2.0, buttons: 0 },
+        PlayerMove { input_sequence: 1, estimated_server_tick: 100, move_x: 1.0, move_z: 0.0, orientation: 0.0 },
+        PlayerMove { input_sequence: 2, estimated_server_tick: 101, move_x: 0.5, move_z: 0.5, orientation: 1.0 },
+        PlayerMove { input_sequence: 3, estimated_server_tick: 102, move_x: 0.0, move_z: 1.0, orientation: 2.0 },
     ];
 
     let mut buf = [0u8; 256];
-    let written = write_player_input_batch(&mut buf, &inputs).unwrap();
-    assert_eq!(written, 1 + 3 * core::mem::size_of::<PlayerInput>());
+    let written = write_player_move_batch(&mut buf, &inputs).unwrap();
+    assert_eq!(written, 1 + 3 * core::mem::size_of::<PlayerMove>());
 
-    let payload = read_player_input_batch(&buf[..written]).unwrap();
-    assert_eq!(payload.len(), 3 * core::mem::size_of::<PlayerInput>());
+    let payload = read_player_move_batch(&buf[..written]).unwrap();
+    assert_eq!(payload.len(), 3 * core::mem::size_of::<PlayerMove>());
 
-    // read_msg handles from_wire conversion for each entry
-    let entry_size = core::mem::size_of::<PlayerInput>();
+    let entry_size = core::mem::size_of::<PlayerMove>();
     for i in 0..3 {
-        let input: PlayerInput = read_msg(&payload[i * entry_size..]).unwrap();
+        let input: PlayerMove = read_msg(&payload[i * entry_size..]).unwrap();
         assert_eq!(input, inputs[i]);
     }
 }
 
 #[test]
-fn test_player_input_batch_max_entries() {
-    let inputs: Vec<PlayerInput> = (0..12).map(|i| PlayerInput {
+fn test_player_move_batch_max_entries() {
+    let inputs: Vec<PlayerMove> = (0..12).map(|i| PlayerMove {
         input_sequence: i, estimated_server_tick: 100 + i,
-        move_x: 0.0, move_z: 0.0, orientation: 0.0, buttons: 0,
+        move_x: 0.0, move_z: 0.0, orientation: 0.0,
     }).collect();
 
     let mut buf = [0u8; 512];
-    let written = write_player_input_batch(&mut buf, &inputs).unwrap();
-    let expected = 1 + 8 * core::mem::size_of::<PlayerInput>();
+    let written = write_player_move_batch(&mut buf, &inputs).unwrap();
+    let expected = 1 + 8 * core::mem::size_of::<PlayerMove>();
     assert_eq!(written, expected);
     assert_eq!(buf[0], 8);
 }
@@ -173,7 +172,8 @@ fn test_wire_sizes() {
     assert_eq!(core::mem::size_of::<EntityMove>(), 36);
     assert_eq!(core::mem::size_of::<EntityState>(), 18);
     assert_eq!(core::mem::size_of::<EntityHealth>(), 12);
-    assert_eq!(core::mem::size_of::<PlayerInput>(), 24);
+    assert_eq!(core::mem::size_of::<PlayerMove>(), 20);
+    assert_eq!(core::mem::size_of::<PlayerAction>(), 20);
     assert_eq!(core::mem::size_of::<StateAck>(), 36);
 }
 
@@ -365,4 +365,98 @@ fn test_wire_format_u64_le() {
     let (_, payload) = reader.into_iter().next().unwrap().unwrap();
     let recovered: Ping = read_msg(payload).unwrap();
     assert_eq!(recovered, msg);
+}
+
+#[test]
+fn test_player_move_roundtrip() {
+    let msg_out = PlayerMove {
+        input_sequence: 42,
+        estimated_server_tick: 1000,
+        move_x: 0.5,
+        move_z: -0.5,
+        orientation: 1.57,
+    };
+
+    let mut buf = [0u8; 64];
+    let written = {
+        let mut writer = BatchWriter::new(&mut buf);
+        writer.write_msg(msg_type::PLAYER_MOVE, &msg_out).unwrap();
+        writer.bytes_written()
+    };
+
+    let reader = BatchReader::new(&buf[..written]);
+    let (header, payload) = reader.into_iter().next().unwrap().unwrap();
+    assert_eq!(hdr_type(&header), msg_type::PLAYER_MOVE);
+    assert_eq!(hdr_len(&header) as usize, core::mem::size_of::<PlayerMove>());
+    let msg_in: PlayerMove = read_msg(payload).unwrap();
+    assert_eq!(msg_in, msg_out);
+}
+
+#[test]
+fn test_player_action_roundtrip() {
+    let msg_out = PlayerAction {
+        input_sequence: 99,
+        server_tick: 5000,
+        action_type: 0x01, // Attack (light)
+        pad_a: 0,
+        pad_b: 0,
+        pad_c: 0,
+        param_a: 12345,
+        param_b: 0,
+    };
+
+    let mut buf = [0u8; 64];
+    let written = {
+        let mut writer = BatchWriter::new(&mut buf);
+        writer.write_msg(msg_type::PLAYER_ACTION, &msg_out).unwrap();
+        writer.bytes_written()
+    };
+
+    let reader = BatchReader::new(&buf[..written]);
+    let (header, payload) = reader.into_iter().next().unwrap().unwrap();
+    assert_eq!(hdr_type(&header), msg_type::PLAYER_ACTION);
+    assert_eq!(hdr_len(&header) as usize, core::mem::size_of::<PlayerAction>());
+    let msg_in: PlayerAction = read_msg(payload).unwrap();
+    assert_eq!(msg_in, msg_out);
+}
+
+#[test]
+fn test_state_ack_roundtrip() {
+    let msg_out = StateAck {
+        input_sequence_acked: 42,
+        server_tick: 1000,
+        tick_delta_us: 16666,
+        x: 100.5,
+        y: 0.0,
+        z: -200.3,
+        vx: 5.0,
+        vy: 0.0,
+        vz: -3.0,
+    };
+
+    let mut buf = [0u8; 64];
+    let written = {
+        let mut writer = BatchWriter::new(&mut buf);
+        writer.write_msg(msg_type::STATE_ACK, &msg_out).unwrap();
+        writer.bytes_written()
+    };
+
+    let reader = BatchReader::new(&buf[..written]);
+    let (header, payload) = reader.into_iter().next().unwrap().unwrap();
+    assert_eq!(hdr_type(&header), msg_type::STATE_ACK);
+    assert_eq!(hdr_len(&header) as usize, core::mem::size_of::<StateAck>());
+    let msg_in: StateAck = read_msg(payload).unwrap();
+    assert_eq!(msg_in, msg_out);
+}
+
+#[test]
+fn test_channels_constants() {
+    use entanglement_net::channel;
+    assert_eq!(channel::CONTROL, 0);
+    assert_eq!(channel::UNRELIABLE, 1);
+    assert_eq!(channel::RELIABLE, 2);
+    assert_eq!(channel::ORDERED, 3);
+    assert_eq!(channel::UNRELIABLE_COALESCED, 4);
+    assert_eq!(channel::RELIABLE_COALESCED, 5);
+    assert_eq!(channel::ORDERED_COALESCED, 6);
 }
