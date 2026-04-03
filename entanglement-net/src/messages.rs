@@ -29,6 +29,7 @@ pub mod msg_type {
     pub const ENTITY_MOVE: u16 = 0x0102;
     pub const ENTITY_STATE: u16 = 0x0103;
     pub const ENTITY_HEALTH: u16 = 0x0104;
+    pub const ENTITY_MOVE_BATCH: u16 = 0x0105;
     pub const PLAYER_MOVE: u16 = 0x0200;
     pub const PLAYER_MOVE_BATCH: u16 = 0x0201;
     pub const PLAYER_ACTION: u16 = 0x0202;
@@ -297,6 +298,75 @@ impl WireMessage for EntityMove {
         Self {
             entity_id: u32::from_le(self.entity_id),
             server_tick: u32::from_le(self.server_tick),
+            x: f32::from_bits(u32::from_le(self.x.to_bits())),
+            y: f32::from_bits(u32::from_le(self.y.to_bits())),
+            z: f32::from_bits(u32::from_le(self.z.to_bits())),
+            orientation: f32::from_bits(u32::from_le(self.orientation.to_bits())),
+            vx: f32::from_bits(u32::from_le(self.vx.to_bits())),
+            vy: f32::from_bits(u32::from_le(self.vy.to_bits())),
+            vz: f32::from_bits(u32::from_le(self.vz.to_bits())),
+        }
+    }
+}
+
+/// Sub-header for ENTITY_MOVE_BATCH: one per packet, carries shared fields.
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EntityMoveBatchHeader {
+    pub count: u16,
+    pub server_tick: u32,
+}
+
+pub const ENTITY_MOVE_BATCH_HDR_SIZE: usize = core::mem::size_of::<EntityMoveBatchHeader>();
+
+impl WireMessage for EntityMoveBatchHeader {
+    fn to_wire(self) -> Self {
+        Self {
+            count: self.count.to_le(),
+            server_tick: self.server_tick.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            count: u16::from_le(self.count),
+            server_tick: u32::from_le(self.server_tick),
+        }
+    }
+}
+
+/// Compact per-entity data for ENTITY_MOVE_BATCH (no server_tick, no MsgHeader).
+/// All fields identical precision to EntityMove.
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EntityMoveCompact {
+    pub entity_id: u32,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub orientation: f32,
+    pub vx: f32,
+    pub vy: f32,
+    pub vz: f32,
+}
+
+pub const ENTITY_MOVE_COMPACT_SIZE: usize = core::mem::size_of::<EntityMoveCompact>();
+
+impl WireMessage for EntityMoveCompact {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            x: f32::from_bits(self.x.to_bits().to_le()),
+            y: f32::from_bits(self.y.to_bits().to_le()),
+            z: f32::from_bits(self.z.to_bits().to_le()),
+            orientation: f32::from_bits(self.orientation.to_bits().to_le()),
+            vx: f32::from_bits(self.vx.to_bits().to_le()),
+            vy: f32::from_bits(self.vy.to_bits().to_le()),
+            vz: f32::from_bits(self.vz.to_bits().to_le()),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
             x: f32::from_bits(u32::from_le(self.x.to_bits())),
             y: f32::from_bits(u32::from_le(self.y.to_bits())),
             z: f32::from_bits(u32::from_le(self.z.to_bits())),
