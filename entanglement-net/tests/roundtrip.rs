@@ -172,6 +172,8 @@ fn test_wire_sizes() {
     assert_eq!(core::mem::size_of::<EntityMove>(), 36);
     assert_eq!(core::mem::size_of::<EntityState>(), 18);
     assert_eq!(core::mem::size_of::<EntityHealth>(), 12);
+    assert_eq!(core::mem::size_of::<HitConfirm>(), 20);
+    assert_eq!(core::mem::size_of::<ActionRejected>(), 8);
     assert_eq!(core::mem::size_of::<PlayerMove>(), 20);
     assert_eq!(core::mem::size_of::<PlayerAction>(), 20);
     assert_eq!(core::mem::size_of::<StateAck>(), 36);
@@ -459,4 +461,133 @@ fn test_channels_constants() {
     assert_eq!(channel::UNRELIABLE_COALESCED, 4);
     assert_eq!(channel::RELIABLE_COALESCED, 5);
     assert_eq!(channel::ORDERED_COALESCED, 6);
+}
+
+#[test]
+fn test_hit_confirm_roundtrip() {
+    let msg_out = HitConfirm {
+        input_sequence: 42,
+        target_id: 7,
+        damage_dealt: 15,
+        target_hp: 85,
+        server_tick: 12000,
+    };
+
+    let mut buf = [0u8; 64];
+    let written = {
+        let mut writer = BatchWriter::new(&mut buf);
+        writer.write_msg(msg_type::HIT_CONFIRM, &msg_out).unwrap();
+        writer.bytes_written()
+    };
+
+    let reader = BatchReader::new(&buf[..written]);
+    let (header, payload) = reader.into_iter().next().unwrap().unwrap();
+    assert_eq!(hdr_type(&header), msg_type::HIT_CONFIRM);
+    assert_eq!(hdr_len(&header) as usize, core::mem::size_of::<HitConfirm>());
+    let msg_in: HitConfirm = read_msg(payload).unwrap();
+    assert_eq!(msg_in, msg_out);
+}
+
+#[test]
+fn test_hit_confirm_wire_le() {
+    let msg = HitConfirm {
+        input_sequence: 0x01020304,
+        target_id: 0x05060708,
+        damage_dealt: 15,
+        target_hp: 85,
+        server_tick: 1000,
+    };
+
+    let mut buf = [0u8; 64];
+    let written = {
+        let mut writer = BatchWriter::new(&mut buf);
+        writer.write_msg(msg_type::HIT_CONFIRM, &msg).unwrap();
+        writer.bytes_written()
+    };
+    assert_eq!(written, 6 + 20);
+
+    // msg_type: HIT_CONFIRM = 0x0105 → LE: [0x05, 0x01]
+    assert_eq!(buf[0], 0x05);
+    assert_eq!(buf[1], 0x01);
+    // input_sequence: 0x01020304 → LE: [04, 03, 02, 01]
+    assert_eq!(&buf[6..10], &[0x04, 0x03, 0x02, 0x01]);
+    // target_id: 0x05060708 → LE: [08, 07, 06, 05]
+    assert_eq!(&buf[10..14], &[0x08, 0x07, 0x06, 0x05]);
+}
+
+#[test]
+fn test_action_rejected_roundtrip() {
+    let msg_out = ActionRejected {
+        input_sequence: 99,
+        reason: 0x00, // NoStamina
+        pad_a: 0,
+        pad_b: 0,
+        pad_c: 0,
+    };
+
+    let mut buf = [0u8; 32];
+    let written = {
+        let mut writer = BatchWriter::new(&mut buf);
+        writer.write_msg(msg_type::ACTION_REJECTED, &msg_out).unwrap();
+        writer.bytes_written()
+    };
+
+    let reader = BatchReader::new(&buf[..written]);
+    let (header, payload) = reader.into_iter().next().unwrap().unwrap();
+    assert_eq!(hdr_type(&header), msg_type::ACTION_REJECTED);
+    assert_eq!(hdr_len(&header) as usize, core::mem::size_of::<ActionRejected>());
+    let msg_in: ActionRejected = read_msg(payload).unwrap();
+    assert_eq!(msg_in, msg_out);
+}
+
+#[test]
+fn test_action_rejected_all_reasons() {
+    let reasons = [0x00u8, 0x01, 0x02, 0x03, 0x04]; // NoStamina..NotInPvpZone
+    for &reason in &reasons {
+        let msg = ActionRejected {
+            input_sequence: reason as u32,
+            reason,
+            pad_a: 0, pad_b: 0, pad_c: 0,
+        };
+        let mut buf = [0u8; 32];
+        let written = {
+            let mut writer = BatchWriter::new(&mut buf);
+            writer.write_msg(msg_type::ACTION_REJECTED, &msg).unwrap();
+            writer.bytes_written()
+        };
+        let reader = BatchReader::new(&buf[..written]);
+        let (_, payload) = reader.into_iter().next().unwrap().unwrap();
+        let recovered: ActionRejected = read_msg(payload).unwrap();
+        assert_eq!(recovered.reason, reason);
+    }
+}
+
+#[test]
+fn test_combat_messages_in_mixed_batch() {
+    let mut buf = [0u8; 256];
+    let mut writer = BatchWriter::new(&mut buf);
+
+    let hit = HitConfirm {
+        input_sequence: 1, target_id: 5,
+        damage_dealt: 15, target_hp: 85, server_tick: 100,
+    };
+    writer.write_msg(msg_type::HIT_CONFIRM, &hit).unwrap();
+
+    let reject = ActionRejected {
+        input_sequence: 2, reason: 0x01,
+        pad_a: 0, pad_b: 0, pad_c: 0,
+    };
+    writer.write_msg(msg_type::ACTION_REJECTED, &reject).unwrap();
+
+    let health = EntityHealth { entity_id: 5, hp: 85, max_hp: 100 };
+    writer.write_msg(msg_type::ENTITY_HEALTH, &health).unwrap();
+
+    assert_eq!(writer.message_count(), 3);
+
+    let reader = BatchReader::new(writer.as_bytes());
+    let msgs: Vec<_> = reader.filter_map(|r| r.ok()).collect();
+    assert_eq!(msgs.len(), 3);
+    assert_eq!(hdr_type(&msgs[0].0), msg_type::HIT_CONFIRM);
+    assert_eq!(hdr_type(&msgs[1].0), msg_type::ACTION_REJECTED);
+    assert_eq!(hdr_type(&msgs[2].0), msg_type::ENTITY_HEALTH);
 }

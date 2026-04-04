@@ -37,6 +37,8 @@
 #define ENT_NET_MSG_ENTITY_MOVE 0x0102
 #define ENT_NET_MSG_ENTITY_STATE 0x0103
 #define ENT_NET_MSG_ENTITY_HEALTH 0x0104
+#define ENT_NET_MSG_HIT_CONFIRM 0x0105
+#define ENT_NET_MSG_ACTION_REJECTED 0x0106
 #define ENT_NET_MSG_PLAYER_MOVE 0x0200
 #define ENT_NET_MSG_PLAYER_MOVE_BATCH 0x0201
 #define ENT_NET_MSG_PLAYER_ACTION 0x0202
@@ -130,6 +132,22 @@ typedef struct {
 
 typedef struct {
     uint32_t input_sequence;
+    uint32_t target_id;
+    uint32_t damage_dealt;
+    uint32_t target_hp;
+    uint32_t server_tick;
+} ent_net_hit_confirm_t;
+
+typedef struct {
+    uint32_t input_sequence;
+    uint8_t reason;
+    uint8_t pad_a;
+    uint8_t pad_b;
+    uint8_t pad_c;
+} ent_net_action_rejected_t;
+
+typedef struct {
+    uint32_t input_sequence;
     uint32_t estimated_server_tick;
     float move_x;
     float move_z;
@@ -182,6 +200,8 @@ ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_despawn_t) == 5, "EntityDespawn size
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_move_t) == 36, "EntityMove size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_state_t) == 18, "EntityState size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_health_t) == 12, "EntityHealth size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_hit_confirm_t) == 20, "HitConfirm size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_action_rejected_t) == 8, "ActionRejected size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_player_move_t) == 20, "PlayerMove size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_player_action_t) == 20, "PlayerAction size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_state_ack_t) == 36, "StateAck size");

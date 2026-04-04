@@ -29,6 +29,8 @@ pub mod msg_type {
     pub const ENTITY_MOVE: u16 = 0x0102;
     pub const ENTITY_STATE: u16 = 0x0103;
     pub const ENTITY_HEALTH: u16 = 0x0104;
+    pub const HIT_CONFIRM: u16 = 0x0105;
+    pub const ACTION_REJECTED: u16 = 0x0106;
     pub const PLAYER_MOVE: u16 = 0x0200;
     pub const PLAYER_MOVE_BATCH: u16 = 0x0201;
     pub const PLAYER_ACTION: u16 = 0x0202;
@@ -366,6 +368,68 @@ impl WireMessage for EntityHealth {
 
 #[repr(C, packed)]
 #[derive(Debug, Clone, Copy, PartialEq)]
+pub struct HitConfirm {
+    pub input_sequence: u32,
+    pub target_id: u32,
+    pub damage_dealt: u32,
+    pub target_hp: u32,
+    pub server_tick: u32,
+}
+
+impl WireMessage for HitConfirm {
+    fn to_wire(self) -> Self {
+        Self {
+            input_sequence: self.input_sequence.to_le(),
+            target_id: self.target_id.to_le(),
+            damage_dealt: self.damage_dealt.to_le(),
+            target_hp: self.target_hp.to_le(),
+            server_tick: self.server_tick.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            input_sequence: u32::from_le(self.input_sequence),
+            target_id: u32::from_le(self.target_id),
+            damage_dealt: u32::from_le(self.damage_dealt),
+            target_hp: u32::from_le(self.target_hp),
+            server_tick: u32::from_le(self.server_tick),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ActionRejected {
+    pub input_sequence: u32,
+    pub reason: u8,
+    pub pad_a: u8,
+    pub pad_b: u8,
+    pub pad_c: u8,
+}
+
+impl WireMessage for ActionRejected {
+    fn to_wire(self) -> Self {
+        Self {
+            input_sequence: self.input_sequence.to_le(),
+            reason: self.reason,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            input_sequence: u32::from_le(self.input_sequence),
+            reason: self.reason,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PlayerMove {
     pub input_sequence: u32,
     pub estimated_server_tick: u32,
@@ -521,6 +585,8 @@ const _: () = assert!(core::mem::size_of::<EntityDespawn>() == 5);
 const _: () = assert!(core::mem::size_of::<EntityMove>() == 36);
 const _: () = assert!(core::mem::size_of::<EntityState>() == 18);
 const _: () = assert!(core::mem::size_of::<EntityHealth>() == 12);
+const _: () = assert!(core::mem::size_of::<HitConfirm>() == 20);
+const _: () = assert!(core::mem::size_of::<ActionRejected>() == 8);
 const _: () = assert!(core::mem::size_of::<PlayerMove>() == 20);
 const _: () = assert!(core::mem::size_of::<PlayerAction>() == 20);
 const _: () = assert!(core::mem::size_of::<StateAck>() == 36);

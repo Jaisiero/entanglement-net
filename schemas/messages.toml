@@ -137,6 +137,38 @@ fields = [
   { name = "max_hp",    type = "u32" },
 ]
 
+# Combat confirmation — RELIABLE channel 2
+# Server confirms a successful hit to the attacker.
+[[message]]
+id = 0x0105
+name = "HitConfirm"
+channel = "reliable"
+direction = "server_to_client"
+fields = [
+  { name = "input_sequence", type = "u32" },
+  { name = "target_id",      type = "u32" },
+  { name = "damage_dealt",   type = "u32" },
+  { name = "target_hp",      type = "u32" },
+  { name = "server_tick",    type = "u32" },
+]
+
+# Combat rejection — RELIABLE channel 2
+# Server rejects an action with a reason code.
+# Reasons: 0x00=NoStamina, 0x01=InRecovery,
+#           0x02=AlreadyAttacking, 0x03=Dead, 0x04=NotInPvpZone
+[[message]]
+id = 0x0106
+name = "ActionRejected"
+channel = "reliable"
+direction = "server_to_client"
+fields = [
+  { name = "input_sequence", type = "u32" },
+  { name = "reason",         type = "u8"  },
+  { name = "pad_a",          type = "u8"  },
+  { name = "pad_b",          type = "u8"  },
+  { name = "pad_c",          type = "u8"  },
+]
+
 # ─────────────────────────────────────────────
 # INPUT MESSAGES (0x0200 - 0x02FF)
 # ─────────────────────────────────────────────
