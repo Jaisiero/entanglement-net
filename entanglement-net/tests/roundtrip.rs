@@ -177,6 +177,8 @@ fn test_wire_sizes() {
     assert_eq!(core::mem::size_of::<PlayerMove>(), 20);
     assert_eq!(core::mem::size_of::<PlayerAction>(), 20);
     assert_eq!(core::mem::size_of::<StateAck>(), 36);
+    assert_eq!(core::mem::size_of::<SessionAuth>(), 2);
+    assert_eq!(core::mem::size_of::<SessionAuthFailed>(), 4);
 }
 
 #[test]
@@ -590,4 +592,107 @@ fn test_combat_messages_in_mixed_batch() {
     assert_eq!(hdr_type(&msgs[0].0), msg_type::HIT_CONFIRM);
     assert_eq!(hdr_type(&msgs[1].0), msg_type::ACTION_REJECTED);
     assert_eq!(hdr_type(&msgs[2].0), msg_type::ENTITY_HEALTH);
+}
+
+// ─── SessionAuth / SessionAuthFailed tests ───
+
+#[test]
+fn test_session_auth_roundtrip_128() {
+    use entanglement_net::batch::{write_session_auth, read_session_auth_jwt};
+
+    let jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkphaW1lIiwiaWF0IjoxNTE2MjM5MDIyfQ";
+    assert!(jwt.len() <= 128);
+
+    let mut payload_buf = [0u8; 520];
+    let written = write_session_auth(jwt, &mut payload_buf).unwrap();
+    assert_eq!(written, 2 + jwt.len());
+
+    let recovered = read_session_auth_jwt(&payload_buf[..written]).unwrap();
+    assert_eq!(recovered, jwt);
+}
+
+#[test]
+fn test_session_auth_roundtrip_512() {
+    use entanglement_net::batch::{write_session_auth, read_session_auth_jwt, SESSION_AUTH_MAX_JWT};
+
+    let jwt: String = (0..SESSION_AUTH_MAX_JWT).map(|i| (b'A' + (i % 26) as u8) as char).collect();
+    assert_eq!(jwt.len(), 512);
+
+    let mut payload_buf = [0u8; 520];
+    let written = write_session_auth(&jwt, &mut payload_buf).unwrap();
+    assert_eq!(written, 2 + 512);
+
+    let recovered = read_session_auth_jwt(&payload_buf[..written]).unwrap();
+    assert_eq!(recovered, jwt);
+}
+
+#[test]
+fn test_session_auth_too_long() {
+    use entanglement_net::batch::write_session_auth;
+
+    let jwt: String = (0..513).map(|_| 'X').collect();
+    let mut buf = [0u8; 600];
+    assert!(write_session_auth(&jwt, &mut buf).is_err());
+}
+
+#[test]
+fn test_session_auth_via_batch_writer() {
+    use entanglement_net::batch::write_session_auth;
+
+    let jwt = "test.jwt.token";
+    let mut payload_buf = [0u8; 128];
+    let payload_len = write_session_auth(jwt, &mut payload_buf).unwrap();
+
+    let mut buf = [0u8; 256];
+    let written = {
+        let mut writer = BatchWriter::new(&mut buf);
+        writer.write_raw(msg_type::SESSION_AUTH, &payload_buf[..payload_len]).unwrap();
+        writer.bytes_written()
+    };
+
+    let reader = BatchReader::new(&buf[..written]);
+    let (header, payload) = reader.into_iter().next().unwrap().unwrap();
+    assert_eq!(hdr_type(&header), msg_type::SESSION_AUTH);
+    assert_eq!(hdr_len(&header), payload_len as u16);
+
+    let recovered = entanglement_net::read_session_auth_jwt(payload).unwrap();
+    assert_eq!(recovered, jwt);
+}
+
+#[test]
+fn test_session_auth_failed_size() {
+    assert_eq!(core::mem::size_of::<SessionAuthFailed>(), 4);
+}
+
+#[test]
+fn test_session_auth_failed_roundtrip() {
+    use entanglement_net::session_auth_fail_reason;
+
+    let msg_out = SessionAuthFailed {
+        reason: session_auth_fail_reason::EXPIRED,
+        pad_a: 0, pad_b: 0, pad_c: 0,
+    };
+
+    let mut buf = [0u8; 32];
+    let written = {
+        let mut writer = BatchWriter::new(&mut buf);
+        writer.write_msg(msg_type::SESSION_AUTH_FAILED, &msg_out).unwrap();
+        writer.bytes_written()
+    };
+
+    let reader = BatchReader::new(&buf[..written]);
+    let (header, payload) = reader.into_iter().next().unwrap().unwrap();
+    assert_eq!(hdr_type(&header), msg_type::SESSION_AUTH_FAILED);
+    assert_eq!(hdr_len(&header) as usize, 4);
+    let msg_in: SessionAuthFailed = read_msg(payload).unwrap();
+    assert_eq!(msg_in.reason, session_auth_fail_reason::EXPIRED);
+}
+
+#[test]
+fn test_session_auth_fail_reason_constants() {
+    use entanglement_net::session_auth_fail_reason;
+    assert_eq!(session_auth_fail_reason::INVALID_TOKEN, 0x00);
+    assert_eq!(session_auth_fail_reason::EXPIRED, 0x01);
+    assert_eq!(session_auth_fail_reason::SERVER_FULL, 0x02);
+    assert_eq!(session_auth_fail_reason::ALREADY_CONNECTED, 0x03);
 }

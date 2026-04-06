@@ -32,6 +32,8 @@
 #define ENT_NET_MSG_PING 0x0003
 #define ENT_NET_MSG_PONG 0x0004
 #define ENT_NET_MSG_SHARD_HANDOFF 0x0005
+#define ENT_NET_MSG_SESSION_AUTH 0x0007
+#define ENT_NET_MSG_SESSION_AUTH_FAILED 0x0008
 #define ENT_NET_MSG_ENTITY_SPAWN 0x0100
 #define ENT_NET_MSG_ENTITY_DESPAWN 0x0101
 #define ENT_NET_MSG_ENTITY_MOVE 0x0102
@@ -88,6 +90,17 @@ typedef struct {
     float new_origin_z;
     uint32_t handoff_tick;
 } ent_net_shard_handoff_t;
+
+typedef struct {
+    uint16_t jwt_length;
+} ent_net_session_auth_t;
+
+typedef struct {
+    uint8_t reason;
+    uint8_t pad_a;
+    uint8_t pad_b;
+    uint8_t pad_c;
+} ent_net_session_auth_failed_t;
 
 typedef struct {
     uint32_t entity_id;
@@ -195,6 +208,8 @@ ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_close_t) == 1, "SessionClose size")
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_ping_t) == 12, "Ping size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_pong_t) == 28, "Pong size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_shard_handoff_t) == 22, "ShardHandoff size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_auth_t) == 2, "SessionAuth size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_auth_failed_t) == 4, "SessionAuthFailed size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_spawn_t) == 26, "EntitySpawn size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_despawn_t) == 5, "EntityDespawn size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_move_t) == 36, "EntityMove size");

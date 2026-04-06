@@ -24,6 +24,8 @@ pub mod msg_type {
     pub const PING: u16 = 0x0003;
     pub const PONG: u16 = 0x0004;
     pub const SHARD_HANDOFF: u16 = 0x0005;
+    pub const SESSION_AUTH: u16 = 0x0007;
+    pub const SESSION_AUTH_FAILED: u16 = 0x0008;
     pub const ENTITY_SPAWN: u16 = 0x0100;
     pub const ENTITY_DESPAWN: u16 = 0x0101;
     pub const ENTITY_MOVE: u16 = 0x0102;
@@ -204,6 +206,53 @@ impl WireMessage for ShardHandoff {
             new_origin_x: f32::from_bits(u32::from_le(self.new_origin_x.to_bits())),
             new_origin_z: f32::from_bits(u32::from_le(self.new_origin_z.to_bits())),
             handoff_tick: u32::from_le(self.handoff_tick),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SessionAuth {
+    pub jwt_length: u16,
+}
+
+impl WireMessage for SessionAuth {
+    fn to_wire(self) -> Self {
+        Self {
+            jwt_length: self.jwt_length.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            jwt_length: u16::from_le(self.jwt_length),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SessionAuthFailed {
+    pub reason: u8,
+    pub pad_a: u8,
+    pub pad_b: u8,
+    pub pad_c: u8,
+}
+
+impl WireMessage for SessionAuthFailed {
+    fn to_wire(self) -> Self {
+        Self {
+            reason: self.reason,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            reason: self.reason,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
         }
     }
 }
@@ -580,6 +629,8 @@ const _: () = assert!(core::mem::size_of::<SessionClose>() == 1);
 const _: () = assert!(core::mem::size_of::<Ping>() == 12);
 const _: () = assert!(core::mem::size_of::<Pong>() == 28);
 const _: () = assert!(core::mem::size_of::<ShardHandoff>() == 22);
+const _: () = assert!(core::mem::size_of::<SessionAuth>() == 2);
+const _: () = assert!(core::mem::size_of::<SessionAuthFailed>() == 4);
 const _: () = assert!(core::mem::size_of::<EntitySpawn>() == 26);
 const _: () = assert!(core::mem::size_of::<EntityDespawn>() == 5);
 const _: () = assert!(core::mem::size_of::<EntityMove>() == 36);

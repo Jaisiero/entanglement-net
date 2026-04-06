@@ -188,3 +188,38 @@ impl<'a> Iterator for BatchReader<'a> {
         Some(Ok((header, payload)))
     }
 }
+
+/// Max JWT size in bytes for SessionAuth.
+pub const SESSION_AUTH_MAX_JWT: usize = 512;
+
+/// Write a SessionAuth payload: [jwt_length: u16 LE][jwt_bytes: N].
+/// Returns the number of payload bytes written (excluding MsgHeader).
+/// Use with `BatchWriter::write_raw(msg_type::SESSION_AUTH, &buf[..n])`.
+pub fn write_session_auth(jwt: &str, buf: &mut [u8]) -> Result<usize, NetError> {
+    let jwt_bytes = jwt.as_bytes();
+    if jwt_bytes.len() > SESSION_AUTH_MAX_JWT {
+        return Err(NetError::PayloadTooSmall {
+            expected: SESSION_AUTH_MAX_JWT,
+            actual: jwt_bytes.len(),
+        });
+    }
+    let total = 2 + jwt_bytes.len();
+    if total > buf.len() {
+        return Err(NetError::BatchFull { needed: total, available: buf.len() });
+    }
+    let len_le = (jwt_bytes.len() as u16).to_le_bytes();
+    buf[0] = len_le[0];
+    buf[1] = len_le[1];
+    buf[2..total].copy_from_slice(jwt_bytes);
+    Ok(total)
+}
+
+/// Read the JWT string from a SessionAuth payload.
+/// Payload format: [jwt_length: u16 LE][jwt_bytes: N].
+pub fn read_session_auth_jwt(payload: &[u8]) -> Option<&str> {
+    if payload.len() < 2 { return None; }
+    let jwt_len = u16::from_le_bytes([payload[0], payload[1]]) as usize;
+    if jwt_len == 0 || jwt_len > SESSION_AUTH_MAX_JWT { return None; }
+    if 2 + jwt_len > payload.len() { return None; }
+    core::str::from_utf8(&payload[2..2 + jwt_len]).ok()
+}

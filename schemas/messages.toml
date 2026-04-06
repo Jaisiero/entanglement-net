@@ -67,6 +67,34 @@ fields = [
   { name = "handoff_tick",        type = "u32" },
 ]
 
+# SessionAuth (0x0007) — client_to_server, RELIABLE channel 2
+# Sent right after UDP connect. Shard ignores other messages until received.
+# Variable payload: [jwt_length: u16][jwt_bytes: N] (max JWT 512 bytes)
+# The struct only covers the fixed header; helpers handle the JWT bytes.
+[[message]]
+id = 0x0007
+name = "SessionAuth"
+channel = "reliable"
+direction = "client_to_server"
+fields = [
+  { name = "jwt_length", type = "u16" },
+]
+
+# SessionAuthFailed (0x0008) — server_to_client, RELIABLE channel 2
+# Sent if JWT verification fails. Client should return to lobby.
+# reason: 0x00=InvalidToken, 0x01=Expired, 0x02=ServerFull, 0x03=AlreadyConnected
+[[message]]
+id = 0x0008
+name = "SessionAuthFailed"
+channel = "reliable"
+direction = "server_to_client"
+fields = [
+  { name = "reason", type = "u8"  },
+  { name = "pad_a",  type = "u8"  },
+  { name = "pad_b",  type = "u8"  },
+  { name = "pad_c",  type = "u8"  },
+]
+
 # ─────────────────────────────────────────────
 # ENTITY MESSAGES (0x0100 - 0x01FF)
 # ─────────────────────────────────────────────

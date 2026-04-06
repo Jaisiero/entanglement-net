@@ -21,3 +21,11 @@ pub mod channel {
     /// Ordered coalesced.
     pub const ORDERED_COALESCED:    u8 = 6;
 }
+
+/// SessionAuthFailed reason codes.
+pub mod session_auth_fail_reason {
+    pub const INVALID_TOKEN:     u8 = 0x00;
+    pub const EXPIRED:           u8 = 0x01;
+    pub const SERVER_FULL:       u8 = 0x02;
+    pub const ALREADY_CONNECTED: u8 = 0x03;
+}

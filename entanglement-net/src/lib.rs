@@ -5,8 +5,8 @@ pub mod session;
 pub mod error;
 pub mod channels;
 
-pub use batch::{BatchReader, BatchWriter, read_msg};
-pub use channels::channel;
+pub use batch::{BatchReader, BatchWriter, read_msg, write_session_auth, read_session_auth_jwt, SESSION_AUTH_MAX_JWT};
+pub use channels::{channel, session_auth_fail_reason};
 pub use dispatcher::{Dispatcher, MessageContext, MessageHandler, GameMessageHandler};
 pub use error::NetError;
 pub use messages::{MsgHeader, WireMessage};
