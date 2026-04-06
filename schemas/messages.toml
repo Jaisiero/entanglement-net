@@ -216,6 +216,7 @@ fields = [
   { name = "move_x",               type = "f32" },
   { name = "move_z",               type = "f32" },
   { name = "orientation",          type = "f32" },
+  { name = "buttons",              type = "u32" },
 ]
 
 # Batch with redundancy — last N PlayerMove per packet

@@ -485,6 +485,7 @@ pub struct PlayerMove {
     pub move_x: f32,
     pub move_z: f32,
     pub orientation: f32,
+    pub buttons: u32,
 }
 
 impl WireMessage for PlayerMove {
@@ -495,6 +496,7 @@ impl WireMessage for PlayerMove {
             move_x: f32::from_bits(self.move_x.to_bits().to_le()),
             move_z: f32::from_bits(self.move_z.to_bits().to_le()),
             orientation: f32::from_bits(self.orientation.to_bits().to_le()),
+            buttons: self.buttons.to_le(),
         }
     }
     fn from_wire(self) -> Self {
@@ -504,6 +506,7 @@ impl WireMessage for PlayerMove {
             move_x: f32::from_bits(u32::from_le(self.move_x.to_bits())),
             move_z: f32::from_bits(u32::from_le(self.move_z.to_bits())),
             orientation: f32::from_bits(u32::from_le(self.orientation.to_bits())),
+            buttons: u32::from_le(self.buttons),
         }
     }
 }
@@ -638,6 +641,6 @@ const _: () = assert!(core::mem::size_of::<EntityState>() == 18);
 const _: () = assert!(core::mem::size_of::<EntityHealth>() == 12);
 const _: () = assert!(core::mem::size_of::<HitConfirm>() == 20);
 const _: () = assert!(core::mem::size_of::<ActionRejected>() == 8);
-const _: () = assert!(core::mem::size_of::<PlayerMove>() == 20);
+const _: () = assert!(core::mem::size_of::<PlayerMove>() == 24);
 const _: () = assert!(core::mem::size_of::<PlayerAction>() == 20);
 const _: () = assert!(core::mem::size_of::<StateAck>() == 36);

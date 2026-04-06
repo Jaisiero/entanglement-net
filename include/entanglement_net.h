@@ -165,6 +165,7 @@ typedef struct {
     float move_x;
     float move_z;
     float orientation;
+    uint32_t buttons;
 } ent_net_player_move_t;
 
 typedef struct {
@@ -217,7 +218,7 @@ ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_state_t) == 18, "EntityState size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_health_t) == 12, "EntityHealth size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_hit_confirm_t) == 20, "HitConfirm size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_action_rejected_t) == 8, "ActionRejected size");
-ENT_NET_STATIC_ASSERT(sizeof(ent_net_player_move_t) == 20, "PlayerMove size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_player_move_t) == 24, "PlayerMove size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_player_action_t) == 20, "PlayerAction size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_state_ack_t) == 36, "StateAck size");
 
