@@ -595,6 +595,8 @@ pub struct StateAck {
     pub vx: f32,
     pub vy: f32,
     pub vz: f32,
+    pub hp: u32,
+    pub stamina: f32,
 }
 
 impl WireMessage for StateAck {
@@ -609,6 +611,8 @@ impl WireMessage for StateAck {
             vx: f32::from_bits(self.vx.to_bits().to_le()),
             vy: f32::from_bits(self.vy.to_bits().to_le()),
             vz: f32::from_bits(self.vz.to_bits().to_le()),
+            hp: self.hp.to_le(),
+            stamina: f32::from_bits(self.stamina.to_bits().to_le()),
         }
     }
     fn from_wire(self) -> Self {
@@ -622,6 +626,8 @@ impl WireMessage for StateAck {
             vx: f32::from_bits(u32::from_le(self.vx.to_bits())),
             vy: f32::from_bits(u32::from_le(self.vy.to_bits())),
             vz: f32::from_bits(u32::from_le(self.vz.to_bits())),
+            hp: u32::from_le(self.hp),
+            stamina: f32::from_bits(u32::from_le(self.stamina.to_bits())),
         }
     }
 }
@@ -643,4 +649,4 @@ const _: () = assert!(core::mem::size_of::<HitConfirm>() == 20);
 const _: () = assert!(core::mem::size_of::<ActionRejected>() == 8);
 const _: () = assert!(core::mem::size_of::<PlayerMove>() == 24);
 const _: () = assert!(core::mem::size_of::<PlayerAction>() == 20);
-const _: () = assert!(core::mem::size_of::<StateAck>() == 36);
+const _: () = assert!(core::mem::size_of::<StateAck>() == 44);
