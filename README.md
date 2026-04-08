@@ -70,7 +70,7 @@ cargo run -p entanglement-net-codegen
 
 ## Tests
 
-### Wire format regression test
+### Wire format regression test (headless)
 
 Deterministic test that catches any change to the wire representation — intentional or accidental. This is critical before implementing delta compression or position quantization, which could silently alter simulation data.
 
@@ -93,6 +93,38 @@ vz             0.000244     0.000061     800
 ```
 
 **To accept changes:** Delete `tests/golden/wire_snapshot.bin` and re-run to regenerate.
+
+### Full-stack wire capture test (live)
+
+Validates the complete server→network→client pipeline by capturing actual EntityMoveCompact data received by a bot during a live benchmark. Lives in [mmo-client-test](https://github.com/Jaisiero/mmo-client-test).
+
+**Capture a baseline** (requires running shard + bots):
+```powershell
+$env:CLIENT_CAPTURE_FILE="baseline.bin"
+$env:CLIENT_BOT_COUNT="500"; $env:CLIENT_DURATION_SECS="75"
+cargo run --release
+```
+
+**Compare after wire format changes:**
+```powershell
+$env:CLIENT_CAPTURE_FILE="current.bin"
+$env:CLIENT_VERIFY_FILE="baseline.bin"
+cargo run --release
+```
+
+Bot 0 records every received EntityMoveCompact (decoded to f64 world coordinates, sorted by server_tick and entity_id). The comparison reports:
+
+- **Matched/missing/extra ticks and entities** — detects connectivity or timing differences.
+- **Per-field deltas** (x, y, z, orientation, vx, vy, vz) with max/mean statistics — same format as the headless test.
+
+```
+═══ Wire Capture Comparison ═══
+  Ticks:    842 matched, 0 missing, 3 extra
+  Entities: 421000 matched, 0 missing, 0 extra
+  Values:   ✓ ALL IDENTICAL (421000 entity-ticks compared)
+```
+
+> **Note:** Live captures are not perfectly deterministic across runs (network timing, tick alignment). Small numbers of missing/extra ticks are normal. The key signal is whether *matched* entity-tick values show systematic deltas — that indicates a wire format change.
 
 ### Roundtrip tests
 
