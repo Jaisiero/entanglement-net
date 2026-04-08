@@ -141,6 +141,36 @@ fields = [
   { name = "vz",          type = "f32" },
 ]
 
+# Batch of compact entity moves sharing a single server_tick.
+# Packet layout: [MsgHeader][EntityMoveBatch.server_tick][EntityMoveCompact × N]
+# MsgHeader.msg_length = 4 + N × 32
+[[message]]
+id = 0x0107
+name = "EntityMoveBatch"
+channel = "unreliable"
+direction = "server_to_client"
+fields = [
+  { name = "server_tick", type = "u32" },
+]
+
+# Compact entity move — no per-entity header or server_tick.
+# 32 bytes (= one AVX2 register). Used inside EntityMoveBatch.
+[[message]]
+id = 0x0108
+name = "EntityMoveCompact"
+channel = "unreliable"
+direction = "server_to_client"
+fields = [
+  { name = "entity_id",   type = "u32" },
+  { name = "x",           type = "f32" },
+  { name = "y",           type = "f32" },
+  { name = "z",           type = "f32" },
+  { name = "orientation", type = "f32" },
+  { name = "vx",          type = "f32" },
+  { name = "vy",          type = "f32" },
+  { name = "vz",          type = "f32" },
+]
+
 [[message]]
 id = 0x0103
 name = "EntityState"
@@ -268,4 +298,6 @@ fields = [
   { name = "vx",                   type = "f32" },
   { name = "vy",                   type = "f32" },
   { name = "vz",                   type = "f32" },
+  { name = "hp",                   type = "u32" },
+  { name = "stamina",              type = "f32" },
 ]

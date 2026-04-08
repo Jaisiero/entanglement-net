@@ -29,6 +29,8 @@ pub mod msg_type {
     pub const ENTITY_SPAWN: u16 = 0x0100;
     pub const ENTITY_DESPAWN: u16 = 0x0101;
     pub const ENTITY_MOVE: u16 = 0x0102;
+    pub const ENTITY_MOVE_BATCH: u16 = 0x0107;
+    pub const ENTITY_MOVE_COMPACT: u16 = 0x0108;
     pub const ENTITY_STATE: u16 = 0x0103;
     pub const ENTITY_HEALTH: u16 = 0x0104;
     pub const HIT_CONFIRM: u16 = 0x0105;
@@ -361,6 +363,65 @@ impl WireMessage for EntityMove {
 
 #[repr(C, packed)]
 #[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EntityMoveBatch {
+    pub server_tick: u32,
+}
+
+impl WireMessage for EntityMoveBatch {
+    fn to_wire(self) -> Self {
+        Self {
+            server_tick: self.server_tick.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            server_tick: u32::from_le(self.server_tick),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EntityMoveCompact {
+    pub entity_id: u32,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub orientation: f32,
+    pub vx: f32,
+    pub vy: f32,
+    pub vz: f32,
+}
+
+impl WireMessage for EntityMoveCompact {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            x: f32::from_bits(self.x.to_bits().to_le()),
+            y: f32::from_bits(self.y.to_bits().to_le()),
+            z: f32::from_bits(self.z.to_bits().to_le()),
+            orientation: f32::from_bits(self.orientation.to_bits().to_le()),
+            vx: f32::from_bits(self.vx.to_bits().to_le()),
+            vy: f32::from_bits(self.vy.to_bits().to_le()),
+            vz: f32::from_bits(self.vz.to_bits().to_le()),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
+            x: f32::from_bits(u32::from_le(self.x.to_bits())),
+            y: f32::from_bits(u32::from_le(self.y.to_bits())),
+            z: f32::from_bits(u32::from_le(self.z.to_bits())),
+            orientation: f32::from_bits(u32::from_le(self.orientation.to_bits())),
+            vx: f32::from_bits(u32::from_le(self.vx.to_bits())),
+            vy: f32::from_bits(u32::from_le(self.vy.to_bits())),
+            vz: f32::from_bits(u32::from_le(self.vz.to_bits())),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct EntityState {
     pub entity_id: u32,
     pub server_tick: u32,
@@ -643,6 +704,8 @@ const _: () = assert!(core::mem::size_of::<SessionAuthFailed>() == 4);
 const _: () = assert!(core::mem::size_of::<EntitySpawn>() == 26);
 const _: () = assert!(core::mem::size_of::<EntityDespawn>() == 5);
 const _: () = assert!(core::mem::size_of::<EntityMove>() == 36);
+const _: () = assert!(core::mem::size_of::<EntityMoveBatch>() == 4);
+const _: () = assert!(core::mem::size_of::<EntityMoveCompact>() == 32);
 const _: () = assert!(core::mem::size_of::<EntityState>() == 18);
 const _: () = assert!(core::mem::size_of::<EntityHealth>() == 12);
 const _: () = assert!(core::mem::size_of::<HitConfirm>() == 20);

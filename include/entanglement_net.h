@@ -37,6 +37,8 @@
 #define ENT_NET_MSG_ENTITY_SPAWN 0x0100
 #define ENT_NET_MSG_ENTITY_DESPAWN 0x0101
 #define ENT_NET_MSG_ENTITY_MOVE 0x0102
+#define ENT_NET_MSG_ENTITY_MOVE_BATCH 0x0107
+#define ENT_NET_MSG_ENTITY_MOVE_COMPACT 0x0108
 #define ENT_NET_MSG_ENTITY_STATE 0x0103
 #define ENT_NET_MSG_ENTITY_HEALTH 0x0104
 #define ENT_NET_MSG_HIT_CONFIRM 0x0105
@@ -130,6 +132,21 @@ typedef struct {
 } ent_net_entity_move_t;
 
 typedef struct {
+    uint32_t server_tick;
+} ent_net_entity_move_batch_t;
+
+typedef struct {
+    uint32_t entity_id;
+    float x;
+    float y;
+    float z;
+    float orientation;
+    float vx;
+    float vy;
+    float vz;
+} ent_net_entity_move_compact_t;
+
+typedef struct {
     uint32_t entity_id;
     uint32_t server_tick;
     uint16_t state_id;
@@ -189,6 +206,8 @@ typedef struct {
     float vx;
     float vy;
     float vz;
+    uint32_t hp;
+    float stamina;
 } ent_net_state_ack_t;
 
 #pragma pack(pop)
@@ -214,12 +233,14 @@ ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_auth_failed_t) == 4, "SessionAuthFa
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_spawn_t) == 26, "EntitySpawn size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_despawn_t) == 5, "EntityDespawn size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_move_t) == 36, "EntityMove size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_move_batch_t) == 4, "EntityMoveBatch size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_move_compact_t) == 32, "EntityMoveCompact size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_state_t) == 18, "EntityState size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_health_t) == 12, "EntityHealth size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_hit_confirm_t) == 20, "HitConfirm size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_action_rejected_t) == 8, "ActionRejected size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_player_move_t) == 24, "PlayerMove size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_player_action_t) == 20, "PlayerAction size");
-ENT_NET_STATIC_ASSERT(sizeof(ent_net_state_ack_t) == 36, "StateAck size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_state_ack_t) == 44, "StateAck size");
 
 #endif /* ENTANGLEMENT_NET_H */
