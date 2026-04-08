@@ -47,6 +47,18 @@
 #define ENT_NET_MSG_PLAYER_MOVE_BATCH 0x0201
 #define ENT_NET_MSG_PLAYER_ACTION 0x0202
 #define ENT_NET_MSG_STATE_ACK 0x0203
+#define ENT_NET_MSG_INTERSHARD_HANDSHAKE 0x0300
+#define ENT_NET_MSG_INTERSHARD_HANDSHAKE_ACK 0x0301
+#define ENT_NET_MSG_INTERSHARD_HEARTBEAT 0x0302
+#define ENT_NET_MSG_INTERSHARD_ENTITY_ENTER 0x0310
+#define ENT_NET_MSG_INTERSHARD_ENTITY_UPDATE 0x0311
+#define ENT_NET_MSG_INTERSHARD_ENTITY_LEAVE 0x0312
+#define ENT_NET_MSG_INTERSHARD_ENTITY_STATE 0x0313
+#define ENT_NET_MSG_INTERSHARD_HANDOFF_REQ 0x0320
+#define ENT_NET_MSG_INTERSHARD_HANDOFF_ACK 0x0321
+#define ENT_NET_MSG_INTERSHARD_ATTACK 0x0330
+#define ENT_NET_MSG_INTERSHARD_HIT_RESULT 0x0331
+#define ENT_NET_MSG_INTERSHARD_COMBAT_STATE 0x0332
 
 #pragma pack(push, 1)
 
@@ -210,6 +222,132 @@ typedef struct {
     float stamina;
 } ent_net_state_ack_t;
 
+typedef struct {
+    uint32_t shard_id;
+    uint32_t sequence;
+    uint64_t hmac_0;
+    uint64_t hmac_1;
+} ent_net_intershard_handshake_t;
+
+typedef struct {
+    uint32_t shard_id;
+    uint32_t sequence;
+    uint8_t ok;
+    uint8_t pad_a;
+    uint8_t pad_b;
+    uint8_t pad_c;
+} ent_net_intershard_handshake_ack_t;
+
+typedef struct {
+    uint32_t shard_id;
+    uint32_t server_tick;
+    uint32_t player_count;
+    uint32_t ghost_count;
+} ent_net_intershard_heartbeat_t;
+
+typedef struct {
+    uint32_t entity_id;
+    uint16_t entity_type;
+    uint16_t pad_a;
+    float x;
+    float y;
+    float z;
+    float orientation;
+    float vx;
+    float vy;
+    float vz;
+    uint32_t hp;
+    uint32_t max_hp;
+    uint8_t combat_state;
+    uint8_t pvp_flag;
+    uint8_t pad_b;
+    uint8_t pad_c;
+} ent_net_intershard_entity_enter_t;
+
+typedef struct {
+    uint32_t entity_id;
+    float x;
+    float y;
+    float z;
+    float orientation;
+    float vx;
+    float vy;
+    float vz;
+} ent_net_intershard_entity_update_t;
+
+typedef struct {
+    uint32_t entity_id;
+    uint8_t reason;
+    uint8_t pad_a;
+    uint8_t pad_b;
+    uint8_t pad_c;
+} ent_net_intershard_entity_leave_t;
+
+typedef struct {
+    uint32_t entity_id;
+    double x;
+    double y;
+    double z;
+    double vx;
+    double vy;
+    double vz;
+    double orientation;
+    uint32_t hp;
+    uint32_t stamina_x100;
+    uint8_t combat_state;
+    uint8_t pvp_flag;
+    uint8_t pad_a;
+    uint8_t pad_b;
+} ent_net_intershard_entity_state_t;
+
+typedef struct {
+    uint32_t entity_id;
+    uint32_t sequence;
+    uint32_t handoff_tick;
+} ent_net_intershard_handoff_req_t;
+
+typedef struct {
+    uint32_t entity_id;
+    uint32_t sequence;
+    uint8_t ok;
+    uint8_t pad_a;
+    uint8_t pad_b;
+    uint8_t pad_c;
+} ent_net_intershard_handoff_ack_t;
+
+typedef struct {
+    uint32_t attacker_entity_id;
+    uint32_t target_entity_id;
+    uint32_t attack_sequence;
+    uint8_t action_type;
+    uint8_t pad_a;
+    uint8_t pad_b;
+    uint8_t pad_c;
+    float attacker_x;
+    float attacker_z;
+    float attacker_orientation;
+} ent_net_intershard_attack_t;
+
+typedef struct {
+    uint32_t attacker_entity_id;
+    uint32_t target_entity_id;
+    uint32_t attack_sequence;
+    uint8_t hit;
+    uint8_t pad_a;
+    uint8_t pad_b;
+    uint8_t pad_c;
+    uint32_t damage_dealt;
+    uint32_t target_hp;
+} ent_net_intershard_hit_result_t;
+
+typedef struct {
+    uint32_t entity_id;
+    uint8_t combat_state;
+    uint8_t pad_a;
+    uint16_t state_param;
+    uint32_t server_tick;
+} ent_net_intershard_combat_state_t;
+
 #pragma pack(pop)
 
 #if defined(__cplusplus)
@@ -242,5 +380,17 @@ ENT_NET_STATIC_ASSERT(sizeof(ent_net_action_rejected_t) == 8, "ActionRejected si
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_player_move_t) == 24, "PlayerMove size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_player_action_t) == 20, "PlayerAction size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_state_ack_t) == 44, "StateAck size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_handshake_t) == 24, "IntershardHandshake size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_handshake_ack_t) == 12, "IntershardHandshakeAck size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_heartbeat_t) == 16, "IntershardHeartbeat size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_enter_t) == 48, "IntershardEntityEnter size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_update_t) == 32, "IntershardEntityUpdate size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_leave_t) == 8, "IntershardEntityLeave size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_state_t) == 72, "IntershardEntityState size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_handoff_req_t) == 12, "IntershardHandoffReq size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_handoff_ack_t) == 12, "IntershardHandoffAck size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_attack_t) == 28, "IntershardAttack size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_hit_result_t) == 24, "IntershardHitResult size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_combat_state_t) == 12, "IntershardCombatState size");
 
 #endif /* ENTANGLEMENT_NET_H */

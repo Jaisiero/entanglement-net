@@ -39,6 +39,18 @@ pub mod msg_type {
     pub const PLAYER_MOVE_BATCH: u16 = 0x0201;
     pub const PLAYER_ACTION: u16 = 0x0202;
     pub const STATE_ACK: u16 = 0x0203;
+    pub const INTERSHARD_HANDSHAKE: u16 = 0x0300;
+    pub const INTERSHARD_HANDSHAKE_ACK: u16 = 0x0301;
+    pub const INTERSHARD_HEARTBEAT: u16 = 0x0302;
+    pub const INTERSHARD_ENTITY_ENTER: u16 = 0x0310;
+    pub const INTERSHARD_ENTITY_UPDATE: u16 = 0x0311;
+    pub const INTERSHARD_ENTITY_LEAVE: u16 = 0x0312;
+    pub const INTERSHARD_ENTITY_STATE: u16 = 0x0313;
+    pub const INTERSHARD_HANDOFF_REQ: u16 = 0x0320;
+    pub const INTERSHARD_HANDOFF_ACK: u16 = 0x0321;
+    pub const INTERSHARD_ATTACK: u16 = 0x0330;
+    pub const INTERSHARD_HIT_RESULT: u16 = 0x0331;
+    pub const INTERSHARD_COMBAT_STATE: u16 = 0x0332;
 }
 
 #[repr(C, packed)]
@@ -693,6 +705,468 @@ impl WireMessage for StateAck {
     }
 }
 
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardHandshake {
+    pub shard_id: u32,
+    pub sequence: u32,
+    pub hmac_0: u64,
+    pub hmac_1: u64,
+}
+
+impl WireMessage for IntershardHandshake {
+    fn to_wire(self) -> Self {
+        Self {
+            shard_id: self.shard_id.to_le(),
+            sequence: self.sequence.to_le(),
+            hmac_0: self.hmac_0.to_le(),
+            hmac_1: self.hmac_1.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            shard_id: u32::from_le(self.shard_id),
+            sequence: u32::from_le(self.sequence),
+            hmac_0: u64::from_le(self.hmac_0),
+            hmac_1: u64::from_le(self.hmac_1),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardHandshakeAck {
+    pub shard_id: u32,
+    pub sequence: u32,
+    pub ok: u8,
+    pub pad_a: u8,
+    pub pad_b: u8,
+    pub pad_c: u8,
+}
+
+impl WireMessage for IntershardHandshakeAck {
+    fn to_wire(self) -> Self {
+        Self {
+            shard_id: self.shard_id.to_le(),
+            sequence: self.sequence.to_le(),
+            ok: self.ok,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            shard_id: u32::from_le(self.shard_id),
+            sequence: u32::from_le(self.sequence),
+            ok: self.ok,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardHeartbeat {
+    pub shard_id: u32,
+    pub server_tick: u32,
+    pub player_count: u32,
+    pub ghost_count: u32,
+}
+
+impl WireMessage for IntershardHeartbeat {
+    fn to_wire(self) -> Self {
+        Self {
+            shard_id: self.shard_id.to_le(),
+            server_tick: self.server_tick.to_le(),
+            player_count: self.player_count.to_le(),
+            ghost_count: self.ghost_count.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            shard_id: u32::from_le(self.shard_id),
+            server_tick: u32::from_le(self.server_tick),
+            player_count: u32::from_le(self.player_count),
+            ghost_count: u32::from_le(self.ghost_count),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardEntityEnter {
+    pub entity_id: u32,
+    pub entity_type: u16,
+    pub pad_a: u16,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub orientation: f32,
+    pub vx: f32,
+    pub vy: f32,
+    pub vz: f32,
+    pub hp: u32,
+    pub max_hp: u32,
+    pub combat_state: u8,
+    pub pvp_flag: u8,
+    pub pad_b: u8,
+    pub pad_c: u8,
+}
+
+impl WireMessage for IntershardEntityEnter {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            entity_type: self.entity_type.to_le(),
+            pad_a: self.pad_a.to_le(),
+            x: f32::from_bits(self.x.to_bits().to_le()),
+            y: f32::from_bits(self.y.to_bits().to_le()),
+            z: f32::from_bits(self.z.to_bits().to_le()),
+            orientation: f32::from_bits(self.orientation.to_bits().to_le()),
+            vx: f32::from_bits(self.vx.to_bits().to_le()),
+            vy: f32::from_bits(self.vy.to_bits().to_le()),
+            vz: f32::from_bits(self.vz.to_bits().to_le()),
+            hp: self.hp.to_le(),
+            max_hp: self.max_hp.to_le(),
+            combat_state: self.combat_state,
+            pvp_flag: self.pvp_flag,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
+            entity_type: u16::from_le(self.entity_type),
+            pad_a: u16::from_le(self.pad_a),
+            x: f32::from_bits(u32::from_le(self.x.to_bits())),
+            y: f32::from_bits(u32::from_le(self.y.to_bits())),
+            z: f32::from_bits(u32::from_le(self.z.to_bits())),
+            orientation: f32::from_bits(u32::from_le(self.orientation.to_bits())),
+            vx: f32::from_bits(u32::from_le(self.vx.to_bits())),
+            vy: f32::from_bits(u32::from_le(self.vy.to_bits())),
+            vz: f32::from_bits(u32::from_le(self.vz.to_bits())),
+            hp: u32::from_le(self.hp),
+            max_hp: u32::from_le(self.max_hp),
+            combat_state: self.combat_state,
+            pvp_flag: self.pvp_flag,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardEntityUpdate {
+    pub entity_id: u32,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub orientation: f32,
+    pub vx: f32,
+    pub vy: f32,
+    pub vz: f32,
+}
+
+impl WireMessage for IntershardEntityUpdate {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            x: f32::from_bits(self.x.to_bits().to_le()),
+            y: f32::from_bits(self.y.to_bits().to_le()),
+            z: f32::from_bits(self.z.to_bits().to_le()),
+            orientation: f32::from_bits(self.orientation.to_bits().to_le()),
+            vx: f32::from_bits(self.vx.to_bits().to_le()),
+            vy: f32::from_bits(self.vy.to_bits().to_le()),
+            vz: f32::from_bits(self.vz.to_bits().to_le()),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
+            x: f32::from_bits(u32::from_le(self.x.to_bits())),
+            y: f32::from_bits(u32::from_le(self.y.to_bits())),
+            z: f32::from_bits(u32::from_le(self.z.to_bits())),
+            orientation: f32::from_bits(u32::from_le(self.orientation.to_bits())),
+            vx: f32::from_bits(u32::from_le(self.vx.to_bits())),
+            vy: f32::from_bits(u32::from_le(self.vy.to_bits())),
+            vz: f32::from_bits(u32::from_le(self.vz.to_bits())),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardEntityLeave {
+    pub entity_id: u32,
+    pub reason: u8,
+    pub pad_a: u8,
+    pub pad_b: u8,
+    pub pad_c: u8,
+}
+
+impl WireMessage for IntershardEntityLeave {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            reason: self.reason,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
+            reason: self.reason,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardEntityState {
+    pub entity_id: u32,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub vx: f64,
+    pub vy: f64,
+    pub vz: f64,
+    pub orientation: f64,
+    pub hp: u32,
+    pub stamina_x100: u32,
+    pub combat_state: u8,
+    pub pvp_flag: u8,
+    pub pad_a: u8,
+    pub pad_b: u8,
+}
+
+impl WireMessage for IntershardEntityState {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            x: f64::from_bits(self.x.to_bits().to_le()),
+            y: f64::from_bits(self.y.to_bits().to_le()),
+            z: f64::from_bits(self.z.to_bits().to_le()),
+            vx: f64::from_bits(self.vx.to_bits().to_le()),
+            vy: f64::from_bits(self.vy.to_bits().to_le()),
+            vz: f64::from_bits(self.vz.to_bits().to_le()),
+            orientation: f64::from_bits(self.orientation.to_bits().to_le()),
+            hp: self.hp.to_le(),
+            stamina_x100: self.stamina_x100.to_le(),
+            combat_state: self.combat_state,
+            pvp_flag: self.pvp_flag,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
+            x: f64::from_bits(u64::from_le(self.x.to_bits())),
+            y: f64::from_bits(u64::from_le(self.y.to_bits())),
+            z: f64::from_bits(u64::from_le(self.z.to_bits())),
+            vx: f64::from_bits(u64::from_le(self.vx.to_bits())),
+            vy: f64::from_bits(u64::from_le(self.vy.to_bits())),
+            vz: f64::from_bits(u64::from_le(self.vz.to_bits())),
+            orientation: f64::from_bits(u64::from_le(self.orientation.to_bits())),
+            hp: u32::from_le(self.hp),
+            stamina_x100: u32::from_le(self.stamina_x100),
+            combat_state: self.combat_state,
+            pvp_flag: self.pvp_flag,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardHandoffReq {
+    pub entity_id: u32,
+    pub sequence: u32,
+    pub handoff_tick: u32,
+}
+
+impl WireMessage for IntershardHandoffReq {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            sequence: self.sequence.to_le(),
+            handoff_tick: self.handoff_tick.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
+            sequence: u32::from_le(self.sequence),
+            handoff_tick: u32::from_le(self.handoff_tick),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardHandoffAck {
+    pub entity_id: u32,
+    pub sequence: u32,
+    pub ok: u8,
+    pub pad_a: u8,
+    pub pad_b: u8,
+    pub pad_c: u8,
+}
+
+impl WireMessage for IntershardHandoffAck {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            sequence: self.sequence.to_le(),
+            ok: self.ok,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
+            sequence: u32::from_le(self.sequence),
+            ok: self.ok,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardAttack {
+    pub attacker_entity_id: u32,
+    pub target_entity_id: u32,
+    pub attack_sequence: u32,
+    pub action_type: u8,
+    pub pad_a: u8,
+    pub pad_b: u8,
+    pub pad_c: u8,
+    pub attacker_x: f32,
+    pub attacker_z: f32,
+    pub attacker_orientation: f32,
+}
+
+impl WireMessage for IntershardAttack {
+    fn to_wire(self) -> Self {
+        Self {
+            attacker_entity_id: self.attacker_entity_id.to_le(),
+            target_entity_id: self.target_entity_id.to_le(),
+            attack_sequence: self.attack_sequence.to_le(),
+            action_type: self.action_type,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+            attacker_x: f32::from_bits(self.attacker_x.to_bits().to_le()),
+            attacker_z: f32::from_bits(self.attacker_z.to_bits().to_le()),
+            attacker_orientation: f32::from_bits(self.attacker_orientation.to_bits().to_le()),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            attacker_entity_id: u32::from_le(self.attacker_entity_id),
+            target_entity_id: u32::from_le(self.target_entity_id),
+            attack_sequence: u32::from_le(self.attack_sequence),
+            action_type: self.action_type,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+            attacker_x: f32::from_bits(u32::from_le(self.attacker_x.to_bits())),
+            attacker_z: f32::from_bits(u32::from_le(self.attacker_z.to_bits())),
+            attacker_orientation: f32::from_bits(u32::from_le(self.attacker_orientation.to_bits())),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardHitResult {
+    pub attacker_entity_id: u32,
+    pub target_entity_id: u32,
+    pub attack_sequence: u32,
+    pub hit: u8,
+    pub pad_a: u8,
+    pub pad_b: u8,
+    pub pad_c: u8,
+    pub damage_dealt: u32,
+    pub target_hp: u32,
+}
+
+impl WireMessage for IntershardHitResult {
+    fn to_wire(self) -> Self {
+        Self {
+            attacker_entity_id: self.attacker_entity_id.to_le(),
+            target_entity_id: self.target_entity_id.to_le(),
+            attack_sequence: self.attack_sequence.to_le(),
+            hit: self.hit,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+            damage_dealt: self.damage_dealt.to_le(),
+            target_hp: self.target_hp.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            attacker_entity_id: u32::from_le(self.attacker_entity_id),
+            target_entity_id: u32::from_le(self.target_entity_id),
+            attack_sequence: u32::from_le(self.attack_sequence),
+            hit: self.hit,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+            damage_dealt: u32::from_le(self.damage_dealt),
+            target_hp: u32::from_le(self.target_hp),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardCombatState {
+    pub entity_id: u32,
+    pub combat_state: u8,
+    pub pad_a: u8,
+    pub state_param: u16,
+    pub server_tick: u32,
+}
+
+impl WireMessage for IntershardCombatState {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            combat_state: self.combat_state,
+            pad_a: self.pad_a,
+            state_param: self.state_param.to_le(),
+            server_tick: self.server_tick.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
+            combat_state: self.combat_state,
+            pad_a: self.pad_a,
+            state_param: u16::from_le(self.state_param),
+            server_tick: u32::from_le(self.server_tick),
+        }
+    }
+}
+
 const _: () = assert!(core::mem::size_of::<MsgHeader>() == 6);
 const _: () = assert!(core::mem::size_of::<SessionOpen>() == 24);
 const _: () = assert!(core::mem::size_of::<SessionClose>() == 1);
@@ -713,3 +1187,15 @@ const _: () = assert!(core::mem::size_of::<ActionRejected>() == 8);
 const _: () = assert!(core::mem::size_of::<PlayerMove>() == 24);
 const _: () = assert!(core::mem::size_of::<PlayerAction>() == 20);
 const _: () = assert!(core::mem::size_of::<StateAck>() == 44);
+const _: () = assert!(core::mem::size_of::<IntershardHandshake>() == 24);
+const _: () = assert!(core::mem::size_of::<IntershardHandshakeAck>() == 12);
+const _: () = assert!(core::mem::size_of::<IntershardHeartbeat>() == 16);
+const _: () = assert!(core::mem::size_of::<IntershardEntityEnter>() == 48);
+const _: () = assert!(core::mem::size_of::<IntershardEntityUpdate>() == 32);
+const _: () = assert!(core::mem::size_of::<IntershardEntityLeave>() == 8);
+const _: () = assert!(core::mem::size_of::<IntershardEntityState>() == 72);
+const _: () = assert!(core::mem::size_of::<IntershardHandoffReq>() == 12);
+const _: () = assert!(core::mem::size_of::<IntershardHandoffAck>() == 12);
+const _: () = assert!(core::mem::size_of::<IntershardAttack>() == 28);
+const _: () = assert!(core::mem::size_of::<IntershardHitResult>() == 24);
+const _: () = assert!(core::mem::size_of::<IntershardCombatState>() == 12);

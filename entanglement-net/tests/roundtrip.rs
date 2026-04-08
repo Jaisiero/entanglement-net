@@ -181,6 +181,19 @@ fn test_wire_sizes() {
     assert_eq!(core::mem::size_of::<EntityMoveCompact>(), 32);
     assert_eq!(core::mem::size_of::<SessionAuth>(), 2);
     assert_eq!(core::mem::size_of::<SessionAuthFailed>(), 4);
+    // Inter-shard messages (0x0300+)
+    assert_eq!(core::mem::size_of::<IntershardHandshake>(), 24);
+    assert_eq!(core::mem::size_of::<IntershardHandshakeAck>(), 12);
+    assert_eq!(core::mem::size_of::<IntershardHeartbeat>(), 16);
+    assert_eq!(core::mem::size_of::<IntershardEntityEnter>(), 48);
+    assert_eq!(core::mem::size_of::<IntershardEntityUpdate>(), 32);
+    assert_eq!(core::mem::size_of::<IntershardEntityLeave>(), 8);
+    assert_eq!(core::mem::size_of::<IntershardEntityState>(), 72);
+    assert_eq!(core::mem::size_of::<IntershardHandoffReq>(), 12);
+    assert_eq!(core::mem::size_of::<IntershardHandoffAck>(), 12);
+    assert_eq!(core::mem::size_of::<IntershardAttack>(), 28);
+    assert_eq!(core::mem::size_of::<IntershardHitResult>(), 24);
+    assert_eq!(core::mem::size_of::<IntershardCombatState>(), 12);
 }
 
 #[test]
@@ -700,4 +713,163 @@ fn test_session_auth_fail_reason_constants() {
     assert_eq!(session_auth_fail_reason::EXPIRED, 0x01);
     assert_eq!(session_auth_fail_reason::SERVER_FULL, 0x02);
     assert_eq!(session_auth_fail_reason::ALREADY_CONNECTED, 0x03);
+}
+
+// ─── Inter-shard message tests ───
+
+#[test]
+fn test_intershard_handshake_roundtrip() {
+    let msg_out = IntershardHandshake {
+        shard_id: 42,
+        sequence: 1,
+        hmac_0: 0x0102030405060708,
+        hmac_1: 0x090A0B0C0D0E0F10,
+    };
+
+    let mut buf = [0u8; 64];
+    let written = {
+        let mut writer = BatchWriter::new(&mut buf);
+        writer.write_msg(msg_type::INTERSHARD_HANDSHAKE, &msg_out).unwrap();
+        writer.bytes_written()
+    };
+
+    let reader = BatchReader::new(&buf[..written]);
+    let (header, payload) = reader.into_iter().next().unwrap().unwrap();
+    assert_eq!(hdr_type(&header), msg_type::INTERSHARD_HANDSHAKE);
+    assert_eq!(hdr_len(&header) as usize, core::mem::size_of::<IntershardHandshake>());
+    let msg_in: IntershardHandshake = read_msg(payload).unwrap();
+    assert_eq!(msg_in, msg_out);
+}
+
+#[test]
+fn test_intershard_entity_enter_roundtrip() {
+    let msg_out = IntershardEntityEnter {
+        entity_id: 100,
+        entity_type: 1,
+        pad_a: 0,
+        x: 50.5, y: 0.0, z: -100.3,
+        orientation: 1.57,
+        vx: 5.0, vy: 0.0, vz: -3.0,
+        hp: 100, max_hp: 100,
+        combat_state: 0, pvp_flag: 1,
+        pad_b: 0, pad_c: 0,
+    };
+
+    let mut buf = [0u8; 128];
+    let written = {
+        let mut writer = BatchWriter::new(&mut buf);
+        writer.write_msg(msg_type::INTERSHARD_ENTITY_ENTER, &msg_out).unwrap();
+        writer.bytes_written()
+    };
+
+    let reader = BatchReader::new(&buf[..written]);
+    let (header, payload) = reader.into_iter().next().unwrap().unwrap();
+    assert_eq!(hdr_type(&header), msg_type::INTERSHARD_ENTITY_ENTER);
+    assert_eq!(hdr_len(&header) as usize, 48);
+    let msg_in: IntershardEntityEnter = read_msg(payload).unwrap();
+    assert_eq!(msg_in, msg_out);
+}
+
+#[test]
+fn test_intershard_entity_state_f64_roundtrip() {
+    let msg_out = IntershardEntityState {
+        entity_id: 42,
+        x: 1234.567890123456,
+        y: 0.0,
+        z: -5678.901234567890,
+        vx: 5.123456789,
+        vy: 0.0,
+        vz: -3.987654321,
+        orientation: 3.14159265358979,
+        hp: 85,
+        stamina_x100: 7500,
+        combat_state: 0,
+        pvp_flag: 1,
+        pad_a: 0,
+        pad_b: 0,
+    };
+
+    let mut buf = [0u8; 128];
+    let written = {
+        let mut writer = BatchWriter::new(&mut buf);
+        writer.write_msg(msg_type::INTERSHARD_ENTITY_STATE, &msg_out).unwrap();
+        writer.bytes_written()
+    };
+
+    let reader = BatchReader::new(&buf[..written]);
+    let (header, payload) = reader.into_iter().next().unwrap().unwrap();
+    assert_eq!(hdr_type(&header), msg_type::INTERSHARD_ENTITY_STATE);
+    assert_eq!(hdr_len(&header) as usize, 72);
+    let msg_in: IntershardEntityState = read_msg(payload).unwrap();
+    assert_eq!(msg_in, msg_out);
+    // Verify f64 precision preserved (copy to avoid packed struct alignment issue)
+    let x = { msg_in.x };
+    let ori = { msg_in.orientation };
+    assert_eq!(x, 1234.567890123456);
+    assert_eq!(ori, 3.14159265358979);
+}
+
+#[test]
+fn test_intershard_attack_roundtrip() {
+    let msg_out = IntershardAttack {
+        attacker_entity_id: 10,
+        target_entity_id: 20,
+        attack_sequence: 5,
+        action_type: 0x01,
+        pad_a: 0, pad_b: 0, pad_c: 0,
+        attacker_x: 100.0,
+        attacker_z: 200.0,
+        attacker_orientation: 1.57,
+    };
+
+    let mut buf = [0u8; 64];
+    let written = {
+        let mut writer = BatchWriter::new(&mut buf);
+        writer.write_msg(msg_type::INTERSHARD_ATTACK, &msg_out).unwrap();
+        writer.bytes_written()
+    };
+
+    let reader = BatchReader::new(&buf[..written]);
+    let (header, payload) = reader.into_iter().next().unwrap().unwrap();
+    assert_eq!(hdr_type(&header), msg_type::INTERSHARD_ATTACK);
+    assert_eq!(hdr_len(&header) as usize, 28);
+    let msg_in: IntershardAttack = read_msg(payload).unwrap();
+    assert_eq!(msg_in, msg_out);
+}
+
+#[test]
+fn test_intershard_mixed_batch() {
+    let mut buf = [0u8; 512];
+    let mut writer = BatchWriter::new(&mut buf);
+
+    let heartbeat = IntershardHeartbeat {
+        shard_id: 1, server_tick: 1000, player_count: 50, ghost_count: 5,
+    };
+    writer.write_msg(msg_type::INTERSHARD_HEARTBEAT, &heartbeat).unwrap();
+
+    let update = IntershardEntityUpdate {
+        entity_id: 42,
+        x: 10.0, y: 0.0, z: 20.0,
+        orientation: 1.0,
+        vx: 1.0, vy: 0.0, vz: -1.0,
+    };
+    writer.write_msg(msg_type::INTERSHARD_ENTITY_UPDATE, &update).unwrap();
+
+    let leave = IntershardEntityLeave {
+        entity_id: 99, reason: 1, pad_a: 0, pad_b: 0, pad_c: 0,
+    };
+    writer.write_msg(msg_type::INTERSHARD_ENTITY_LEAVE, &leave).unwrap();
+
+    assert_eq!(writer.message_count(), 3);
+
+    let reader = BatchReader::new(writer.as_bytes());
+    let msgs: Vec<_> = reader.filter_map(|r| r.ok()).collect();
+    assert_eq!(msgs.len(), 3);
+    assert_eq!(hdr_type(&msgs[0].0), msg_type::INTERSHARD_HEARTBEAT);
+    assert_eq!(hdr_type(&msgs[1].0), msg_type::INTERSHARD_ENTITY_UPDATE);
+    assert_eq!(hdr_type(&msgs[2].0), msg_type::INTERSHARD_ENTITY_LEAVE);
+
+    // Verify update has same layout as EntityMoveCompact (32 bytes)
+    assert_eq!(core::mem::size_of::<IntershardEntityUpdate>(), 32);
+    assert_eq!(core::mem::size_of::<EntityMoveCompact>(), 32);
 }

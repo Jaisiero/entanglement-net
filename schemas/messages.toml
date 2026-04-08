@@ -301,3 +301,209 @@ fields = [
   { name = "hp",                   type = "u32" },
   { name = "stamina",              type = "f32" },
 ]
+
+# ─────────────────────────────────────────────
+# INTER-SHARD MESSAGES (0x0300 - 0x03FF)
+# Shard-to-shard P2P over dedicated UDP port
+# ─────────────────────────────────────────────
+
+# UDP handshake — establish trust between peer shards.
+# hmac: HMAC-SHA256(INTERNAL_API_KEY, sorted(shard_id_a, shard_id_b))
+# Truncated to 16 bytes for wire efficiency.
+[[message]]
+id = 0x0300
+name = "IntershardHandshake"
+channel = "reliable"
+direction = "bidirectional"
+fields = [
+  { name = "shard_id",    type = "u32" },
+  { name = "sequence",    type = "u32" },
+  { name = "hmac_0",      type = "u64" },
+  { name = "hmac_1",      type = "u64" },
+]
+
+# Handshake acknowledgement
+[[message]]
+id = 0x0301
+name = "IntershardHandshakeAck"
+channel = "reliable"
+direction = "bidirectional"
+fields = [
+  { name = "shard_id",    type = "u32" },
+  { name = "sequence",    type = "u32" },
+  { name = "ok",          type = "u8"  },
+  { name = "pad_a",       type = "u8"  },
+  { name = "pad_b",       type = "u8"  },
+  { name = "pad_c",       type = "u8"  },
+]
+
+# Peer keepalive — sent every 2 seconds
+[[message]]
+id = 0x0302
+name = "IntershardHeartbeat"
+channel = "unreliable"
+direction = "bidirectional"
+fields = [
+  { name = "shard_id",      type = "u32" },
+  { name = "server_tick",   type = "u32" },
+  { name = "player_count",  type = "u32" },
+  { name = "ghost_count",   type = "u32" },
+]
+
+# Entity entered boundary zone — create ghost on receiver
+[[message]]
+id = 0x0310
+name = "IntershardEntityEnter"
+channel = "reliable"
+direction = "bidirectional"
+fields = [
+  { name = "entity_id",    type = "u32" },
+  { name = "entity_type",  type = "u16" },
+  { name = "pad_a",        type = "u16" },
+  { name = "x",            type = "f32" },
+  { name = "y",            type = "f32" },
+  { name = "z",            type = "f32" },
+  { name = "orientation",  type = "f32" },
+  { name = "vx",           type = "f32" },
+  { name = "vy",           type = "f32" },
+  { name = "vz",           type = "f32" },
+  { name = "hp",           type = "u32" },
+  { name = "max_hp",       type = "u32" },
+  { name = "combat_state", type = "u8"  },
+  { name = "pvp_flag",     type = "u8"  },
+  { name = "pad_b",        type = "u8"  },
+  { name = "pad_c",        type = "u8"  },
+]
+
+# Position/velocity update for ghost entity — unreliable, every tick
+# Same layout as EntityMoveCompact for cache/SIMD friendliness
+[[message]]
+id = 0x0311
+name = "IntershardEntityUpdate"
+channel = "unreliable"
+direction = "bidirectional"
+fields = [
+  { name = "entity_id",   type = "u32" },
+  { name = "x",           type = "f32" },
+  { name = "y",           type = "f32" },
+  { name = "z",           type = "f32" },
+  { name = "orientation", type = "f32" },
+  { name = "vx",          type = "f32" },
+  { name = "vy",          type = "f32" },
+  { name = "vz",          type = "f32" },
+]
+
+# Entity left boundary zone — remove ghost
+[[message]]
+id = 0x0312
+name = "IntershardEntityLeave"
+channel = "reliable"
+direction = "bidirectional"
+fields = [
+  { name = "entity_id", type = "u32" },
+  { name = "reason",    type = "u8" },
+  { name = "pad_a",     type = "u8" },
+  { name = "pad_b",     type = "u8" },
+  { name = "pad_c",     type = "u8" },
+]
+
+# Full entity state transfer for handoff
+[[message]]
+id = 0x0313
+name = "IntershardEntityState"
+channel = "reliable"
+direction = "bidirectional"
+fields = [
+  { name = "entity_id",    type = "u32" },
+  { name = "x",            type = "f64" },
+  { name = "y",            type = "f64" },
+  { name = "z",            type = "f64" },
+  { name = "vx",           type = "f64" },
+  { name = "vy",           type = "f64" },
+  { name = "vz",           type = "f64" },
+  { name = "orientation",  type = "f64" },
+  { name = "hp",           type = "u32" },
+  { name = "stamina_x100", type = "u32" },
+  { name = "combat_state", type = "u8"  },
+  { name = "pvp_flag",     type = "u8"  },
+  { name = "pad_a",        type = "u8"  },
+  { name = "pad_b",        type = "u8"  },
+]
+
+# Request entity ownership transfer (handoff)
+[[message]]
+id = 0x0320
+name = "IntershardHandoffReq"
+channel = "reliable"
+direction = "bidirectional"
+fields = [
+  { name = "entity_id",  type = "u32" },
+  { name = "sequence",   type = "u32" },
+  { name = "handoff_tick", type = "u32" },
+]
+
+# Confirm ready to accept entity
+[[message]]
+id = 0x0321
+name = "IntershardHandoffAck"
+channel = "reliable"
+direction = "bidirectional"
+fields = [
+  { name = "entity_id", type = "u32" },
+  { name = "sequence",  type = "u32" },
+  { name = "ok",        type = "u8"  },
+  { name = "pad_a",     type = "u8"  },
+  { name = "pad_b",     type = "u8"  },
+  { name = "pad_c",     type = "u8"  },
+]
+
+# Forward attack from local player to ghost's authoritative shard
+[[message]]
+id = 0x0330
+name = "IntershardAttack"
+channel = "reliable"
+direction = "bidirectional"
+fields = [
+  { name = "attacker_entity_id", type = "u32" },
+  { name = "target_entity_id",   type = "u32" },
+  { name = "attack_sequence",    type = "u32" },
+  { name = "action_type",        type = "u8"  },
+  { name = "pad_a",              type = "u8"  },
+  { name = "pad_b",              type = "u8"  },
+  { name = "pad_c",              type = "u8"  },
+  { name = "attacker_x",         type = "f32" },
+  { name = "attacker_z",         type = "f32" },
+  { name = "attacker_orientation", type = "f32" },
+]
+
+# Hit/miss result from authoritative shard
+[[message]]
+id = 0x0331
+name = "IntershardHitResult"
+channel = "reliable"
+direction = "bidirectional"
+fields = [
+  { name = "attacker_entity_id", type = "u32" },
+  { name = "target_entity_id",   type = "u32" },
+  { name = "attack_sequence",    type = "u32" },
+  { name = "hit",                type = "u8"  },
+  { name = "pad_a",              type = "u8"  },
+  { name = "pad_b",              type = "u8"  },
+  { name = "pad_c",              type = "u8"  },
+  { name = "damage_dealt",       type = "u32" },
+  { name = "target_hp",          type = "u32" },
+]
+
+# Combat FSM state change broadcast for ghost
+[[message]]
+id = 0x0332
+name = "IntershardCombatState"
+channel = "unreliable"
+direction = "bidirectional"
+fields = [
+  { name = "entity_id",    type = "u32" },
+  { name = "combat_state", type = "u8"  },
+  { name = "pad_a",        type = "u8"  },
+  { name = "state_param",  type = "u16" },
+  { name = "server_tick",  type = "u32" },
+]
