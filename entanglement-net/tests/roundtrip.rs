@@ -126,9 +126,9 @@ fn test_mixed_batch() {
 #[test]
 fn test_player_move_batch_variable_length() {
     let inputs = [
-        PlayerMove { input_sequence: 1, estimated_server_tick: 100, move_x: 1.0, move_z: 0.0, orientation: 0.0 },
-        PlayerMove { input_sequence: 2, estimated_server_tick: 101, move_x: 0.5, move_z: 0.5, orientation: 1.0 },
-        PlayerMove { input_sequence: 3, estimated_server_tick: 102, move_x: 0.0, move_z: 1.0, orientation: 2.0 },
+        PlayerMove { input_sequence: 1, estimated_server_tick: 100, move_x: 1.0, move_z: 0.0, orientation: 0.0, buttons: 0 },
+        PlayerMove { input_sequence: 2, estimated_server_tick: 101, move_x: 0.5, move_z: 0.5, orientation: 1.0, buttons: 0 },
+        PlayerMove { input_sequence: 3, estimated_server_tick: 102, move_x: 0.0, move_z: 1.0, orientation: 2.0, buttons: 0 },
     ];
 
     let mut buf = [0u8; 256];
@@ -149,7 +149,7 @@ fn test_player_move_batch_variable_length() {
 fn test_player_move_batch_max_entries() {
     let inputs: Vec<PlayerMove> = (0..12).map(|i| PlayerMove {
         input_sequence: i, estimated_server_tick: 100 + i,
-        move_x: 0.0, move_z: 0.0, orientation: 0.0,
+        move_x: 0.0, move_z: 0.0, orientation: 0.0, buttons: 0,
     }).collect();
 
     let mut buf = [0u8; 512];
@@ -174,9 +174,11 @@ fn test_wire_sizes() {
     assert_eq!(core::mem::size_of::<EntityHealth>(), 12);
     assert_eq!(core::mem::size_of::<HitConfirm>(), 20);
     assert_eq!(core::mem::size_of::<ActionRejected>(), 8);
-    assert_eq!(core::mem::size_of::<PlayerMove>(), 20);
+    assert_eq!(core::mem::size_of::<PlayerMove>(), 24);
     assert_eq!(core::mem::size_of::<PlayerAction>(), 20);
-    assert_eq!(core::mem::size_of::<StateAck>(), 36);
+    assert_eq!(core::mem::size_of::<StateAck>(), 44);
+    assert_eq!(core::mem::size_of::<EntityMoveBatch>(), 4);
+    assert_eq!(core::mem::size_of::<EntityMoveCompact>(), 32);
     assert_eq!(core::mem::size_of::<SessionAuth>(), 2);
     assert_eq!(core::mem::size_of::<SessionAuthFailed>(), 4);
 }
@@ -379,6 +381,7 @@ fn test_player_move_roundtrip() {
         move_x: 0.5,
         move_z: -0.5,
         orientation: 1.57,
+        buttons: 0,
     };
 
     let mut buf = [0u8; 64];
@@ -436,6 +439,8 @@ fn test_state_ack_roundtrip() {
         vx: 5.0,
         vy: 0.0,
         vz: -3.0,
+        hp: 100,
+        stamina: 100.0,
     };
 
     let mut buf = [0u8; 64];
