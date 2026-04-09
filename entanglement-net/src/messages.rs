@@ -91,6 +91,8 @@ pub struct SessionOpen {
     pub origin_z: f32,
     pub server_tick: u32,
     pub tick_rate_hz: u16,
+    /// Persistent database player ID — stable across shard handoffs.
+    pub persistent_id: u32,
 }
 
 impl WireMessage for SessionOpen {
@@ -103,6 +105,7 @@ impl WireMessage for SessionOpen {
             origin_z: f32::from_bits(self.origin_z.to_bits().to_le()),
             server_tick: self.server_tick.to_le(),
             tick_rate_hz: self.tick_rate_hz.to_le(),
+            persistent_id: self.persistent_id.to_le(),
         }
     }
     fn from_wire(self) -> Self {
@@ -114,6 +117,7 @@ impl WireMessage for SessionOpen {
             origin_z: f32::from_bits(u32::from_le(self.origin_z.to_bits())),
             server_tick: u32::from_le(self.server_tick),
             tick_rate_hz: u16::from_le(self.tick_rate_hz),
+            persistent_id: u32::from_le(self.persistent_id),
         }
     }
 }
@@ -1168,7 +1172,7 @@ impl WireMessage for IntershardCombatState {
 }
 
 const _: () = assert!(core::mem::size_of::<MsgHeader>() == 6);
-const _: () = assert!(core::mem::size_of::<SessionOpen>() == 24);
+const _: () = assert!(core::mem::size_of::<SessionOpen>() == 28);
 const _: () = assert!(core::mem::size_of::<SessionClose>() == 1);
 const _: () = assert!(core::mem::size_of::<Ping>() == 12);
 const _: () = assert!(core::mem::size_of::<Pong>() == 28);
