@@ -874,6 +874,11 @@ pub struct IntershardEntityUpdate {
     pub vx: f32,
     pub vy: f32,
     pub vz: f32,
+    pub hp: u32,
+    pub combat_state: u8,
+    pub pad_a: u8,
+    pub pad_b: u8,
+    pub pad_c: u8,
 }
 
 impl WireMessage for IntershardEntityUpdate {
@@ -887,6 +892,11 @@ impl WireMessage for IntershardEntityUpdate {
             vx: f32::from_bits(self.vx.to_bits().to_le()),
             vy: f32::from_bits(self.vy.to_bits().to_le()),
             vz: f32::from_bits(self.vz.to_bits().to_le()),
+            hp: self.hp.to_le(),
+            combat_state: self.combat_state,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
         }
     }
     fn from_wire(self) -> Self {
@@ -899,6 +909,11 @@ impl WireMessage for IntershardEntityUpdate {
             vx: f32::from_bits(u32::from_le(self.vx.to_bits())),
             vy: f32::from_bits(u32::from_le(self.vy.to_bits())),
             vz: f32::from_bits(u32::from_le(self.vz.to_bits())),
+            hp: u32::from_le(self.hp),
+            combat_state: self.combat_state,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
         }
     }
 }
@@ -1195,7 +1210,7 @@ const _: () = assert!(core::mem::size_of::<IntershardHandshake>() == 24);
 const _: () = assert!(core::mem::size_of::<IntershardHandshakeAck>() == 12);
 const _: () = assert!(core::mem::size_of::<IntershardHeartbeat>() == 16);
 const _: () = assert!(core::mem::size_of::<IntershardEntityEnter>() == 48);
-const _: () = assert!(core::mem::size_of::<IntershardEntityUpdate>() == 32);
+const _: () = assert!(core::mem::size_of::<IntershardEntityUpdate>() == 40);
 const _: () = assert!(core::mem::size_of::<IntershardEntityLeave>() == 8);
 const _: () = assert!(core::mem::size_of::<IntershardEntityState>() == 72);
 const _: () = assert!(core::mem::size_of::<IntershardHandoffReq>() == 12);
