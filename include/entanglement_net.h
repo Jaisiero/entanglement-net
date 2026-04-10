@@ -298,6 +298,10 @@ typedef struct {
     uint8_t pvp_flag;
     uint8_t pad_a;
     uint8_t pad_b;
+    uint32_t combat_state_param;
+    uint32_t group_id;
+    uint32_t last_sequence;
+    uint32_t last_action_sequence;
 } ent_net_intershard_entity_state_t;
 
 typedef struct {
@@ -386,7 +390,7 @@ ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_heartbeat_t) == 16, "IntershardH
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_enter_t) == 48, "IntershardEntityEnter size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_update_t) == 32, "IntershardEntityUpdate size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_leave_t) == 8, "IntershardEntityLeave size");
-ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_state_t) == 72, "IntershardEntityState size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_state_t) == 88, "IntershardEntityState size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_handoff_req_t) == 12, "IntershardHandoffReq size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_handoff_ack_t) == 12, "IntershardHandoffAck size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_attack_t) == 28, "IntershardAttack size");

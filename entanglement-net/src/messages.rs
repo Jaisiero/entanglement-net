@@ -966,6 +966,10 @@ pub struct IntershardEntityState {
     pub pvp_flag: u8,
     pub pad_a: u8,
     pub pad_b: u8,
+    pub combat_state_param: u32,
+    pub group_id: u32,
+    pub last_sequence: u32,
+    pub last_action_sequence: u32,
 }
 
 impl WireMessage for IntershardEntityState {
@@ -985,6 +989,10 @@ impl WireMessage for IntershardEntityState {
             pvp_flag: self.pvp_flag,
             pad_a: self.pad_a,
             pad_b: self.pad_b,
+            combat_state_param: self.combat_state_param.to_le(),
+            group_id: self.group_id.to_le(),
+            last_sequence: self.last_sequence.to_le(),
+            last_action_sequence: self.last_action_sequence.to_le(),
         }
     }
     fn from_wire(self) -> Self {
@@ -1003,6 +1011,10 @@ impl WireMessage for IntershardEntityState {
             pvp_flag: self.pvp_flag,
             pad_a: self.pad_a,
             pad_b: self.pad_b,
+            combat_state_param: u32::from_le(self.combat_state_param),
+            group_id: u32::from_le(self.group_id),
+            last_sequence: u32::from_le(self.last_sequence),
+            last_action_sequence: u32::from_le(self.last_action_sequence),
         }
     }
 }
@@ -1212,7 +1224,7 @@ const _: () = assert!(core::mem::size_of::<IntershardHeartbeat>() == 16);
 const _: () = assert!(core::mem::size_of::<IntershardEntityEnter>() == 48);
 const _: () = assert!(core::mem::size_of::<IntershardEntityUpdate>() == 40);
 const _: () = assert!(core::mem::size_of::<IntershardEntityLeave>() == 8);
-const _: () = assert!(core::mem::size_of::<IntershardEntityState>() == 72);
+const _: () = assert!(core::mem::size_of::<IntershardEntityState>() == 88);
 const _: () = assert!(core::mem::size_of::<IntershardHandoffReq>() == 12);
 const _: () = assert!(core::mem::size_of::<IntershardHandoffAck>() == 12);
 const _: () = assert!(core::mem::size_of::<IntershardAttack>() == 28);

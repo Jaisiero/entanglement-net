@@ -428,9 +428,13 @@ fields = [
   { name = "pvp_flag",     type = "u8"  },
   { name = "pad_a",        type = "u8"  },
   { name = "pad_b",        type = "u8"  },
+  { name = "combat_state_param", type = "u32" },
+  { name = "group_id",          type = "u32" },
+  { name = "last_sequence",     type = "u32" },
+  { name = "last_action_sequence", type = "u32" },
 ]
 
-# Request entity ownership transfer (handoff)
+# Request entity ownership transfer(handoff)
 [[message]]
 id = 0x0320
 name = "IntershardHandoffReq"
