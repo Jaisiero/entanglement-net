@@ -31,6 +31,10 @@ pub mod msg_type {
     pub const ENTITY_MOVE: u16 = 0x0102;
     pub const ENTITY_MOVE_BATCH: u16 = 0x0107;
     pub const ENTITY_MOVE_COMPACT: u16 = 0x0108;
+    /// Delta-encoded entity move batch.
+    /// Wire: MsgHeader(6B) + server_tick(4B) + bitfield(1B) + N × (entity_id(4B) + changed_fields...)
+    /// All entities share the same bitfield; stride = 4 + popcount(bitfield) * 4.
+    pub const ENTITY_MOVE_DELTA_BATCH: u16 = 0x0109;
     pub const ENTITY_STATE: u16 = 0x0103;
     pub const ENTITY_HEALTH: u16 = 0x0104;
     pub const HIT_CONFIRM: u16 = 0x0105;
