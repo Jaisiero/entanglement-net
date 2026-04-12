@@ -134,6 +134,56 @@ Verifies every message type survives `to_wire()` → `from_wire()` bit-exactly, 
 cargo test -p entanglement-net --test roundtrip
 ```
 
+## Delta Encoding (Client-Facing)
+
+Client-facing delta encoding reduces bandwidth for `EntityMoveCompact` broadcasts
+by grouping entities that share the same changed-field pattern and sending only
+the changed fields.
+
+### Wire format — `ENTITY_MOVE_DELTA_BATCH` (0x0109)
+
+```
+MsgHeader:    6B  (standard: msg_type + length + sequence)
+server_tick:  4B  (u32, current server tick)
+bitfield:     1B  (u8, which of 7 fields follow per entity)
+N × entry:    (4 + popcount(bitfield) × 4) bytes each
+  entity_id:  4B  (u32, always present)
+  [fields...]:    only changed fields, in bit order, f32 little-endian
+
+Bitfield bits:
+  0: x       1: y       2: z       3: orientation
+  4: vx      5: vy      6: vz
+```
+
+- **Stride per entity**: `4 + popcount(bitfield) × 4` bytes
+- **All entities in a batch share the same bitfield** — the server groups entities
+  by change pattern and emits one batch per pattern.
+- **Keyframe interval**: every N ticks (default 60, ~0.5s at 120Hz), staggered
+  per client via `(server_tick + player_eid) % interval`, a full
+  `EntityMoveCompact` batch is sent to recover from UDP loss.
+
+### Global bitfield history (V4 architecture)
+
+Instead of per-session baseline HashMaps, the server maintains a global
+ring buffer of per-entity bitfields:
+
+1. **Pre-tick**: compare each entity's current state against previous tick →
+   compute 7-bit changed-field bitfield, store in ring slot `tick % 8`.
+2. **Per-client send**: cumulative-OR recent bitfields based on the client's
+   LOD skip gap (1–4 ticks) to determine which fields changed since last send.
+3. **Batch grouping**: entities are grouped by identical cumulative bitfield
+   pattern → one `ENTITY_MOVE_DELTA_BATCH` per pattern.
+
+This eliminates O(sessions × entities) hash lookups, replacing them with
+O(entities) bitfield pre-computation + O(entities) byte lookups per session.
+
+### Configuration
+
+| Environment variable | Default | Description |
+|---|---|---|
+| `SHARD_CLIENT_DELTA_ENCODING` | `true` | Enable/disable client delta encoding |
+| `SHARD_CLIENT_DELTA_KEYFRAME_INTERVAL` | `60` | Ticks between full keyframes |
+
 ## Delta Encoding (Inter-Shard)
 
 The `messages::delta` module provides bitfield-based delta encoding for `IntershardEntityUpdate` messages, reducing inter-shard bandwidth by only transmitting fields that changed since the last sent baseline.
