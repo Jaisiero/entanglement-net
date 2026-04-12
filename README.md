@@ -134,6 +134,55 @@ Verifies every message type survives `to_wire()` → `from_wire()` bit-exactly, 
 cargo test -p entanglement-net --test roundtrip
 ```
 
+## Delta Encoding (Inter-Shard)
+
+The `messages::delta` module provides bitfield-based delta encoding for `IntershardEntityUpdate` messages, reducing inter-shard bandwidth by only transmitting fields that changed since the last sent baseline.
+
+### Wire format
+
+```
+entity_id:  u32  (4B, always present)
+seq:        u16  (2B, monotonic counter for stale-packet detection)
+bitfield:   u16  (2B, which fields follow)
+[fields...]:      only changed fields, in field order, little-endian
+
+Bitfield bits:
+  0: x (f32)    1: y (f32)     2: z (f32)     3: orientation (f32)
+  4: vx (f32)   5: vy (f32)    6: vz (f32)    7: hp (u32)
+  8: combat_state (u8)
+```
+
+- **Header**: 8 bytes (entity_id + seq + bitfield).
+- **Min payload**: 8 bytes (header only, all fields unchanged — typically skipped entirely).
+- **Max payload**: 41 bytes (all 9 fields changed). Full `IntershardEntityUpdate` is 40 bytes + 6B msg header = 46 bytes.
+- **Message type**: `INTERSHARD_ENTITY_UPDATE_DELTA` (0x0314).
+
+### API
+
+```rust
+use entanglement_net::messages::delta;
+
+// Sender: compute which fields changed, encode delta
+let bitfield = delta::compute_bitfield(&baseline, &current);
+let len = delta::encode(entity_id, seq, bitfield, &current, &mut buf);
+
+// Receiver: decode delta, mutating baseline in-place
+if let Some((entity_id, seq)) = delta::decode(payload, &mut baseline) {
+    // baseline now contains the updated state
+}
+```
+
+### Benchmark results (500 bots, dual-shard, boundary PvP)
+
+~80% of inter-shard entity updates only change 1 field (x position), yielding ~72% theoretical bandwidth savings. Measured A/B comparison:
+
+| Metric | Delta ON | Delta OFF | Improvement |
+|--------|----------|-----------|-------------|
+| inter_us avg (α) | 108 µs | 125 µs | **-14%** |
+| inter_us avg (β) | 103 µs | 119 µs | **-13%** |
+| tick_us avg (α) | 1,772 µs | 1,871 µs | **-5%** |
+| tick_us avg (β) | 1,660 µs | 1,747 µs | **-5%** |
+
 ## Crate structure
 
 ```
