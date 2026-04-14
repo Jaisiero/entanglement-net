@@ -32,6 +32,7 @@
 #define ENT_NET_MSG_PING 0x0003
 #define ENT_NET_MSG_PONG 0x0004
 #define ENT_NET_MSG_SHARD_HANDOFF 0x0005
+#define ENT_NET_MSG_HANDOFF_AUTH 0x0006
 #define ENT_NET_MSG_SESSION_AUTH 0x0007
 #define ENT_NET_MSG_SESSION_AUTH_FAILED 0x0008
 #define ENT_NET_MSG_ENTITY_SPAWN 0x0100
@@ -103,7 +104,13 @@ typedef struct {
     float new_origin_x;
     float new_origin_z;
     uint32_t handoff_tick;
+    uint64_t handoff_token;
 } ent_net_shard_handoff_t;
+
+typedef struct {
+    uint32_t entity_id;
+    uint64_t handoff_token;
+} ent_net_handoff_auth_t;
 
 typedef struct {
     uint16_t jwt_length;
@@ -302,6 +309,7 @@ typedef struct {
     uint32_t group_id;
     uint32_t last_sequence;
     uint32_t last_action_sequence;
+    uint64_t handoff_token;
 } ent_net_intershard_entity_state_t;
 
 typedef struct {
@@ -369,7 +377,8 @@ ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_open_t) == 24, "SessionOpen size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_close_t) == 1, "SessionClose size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_ping_t) == 12, "Ping size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_pong_t) == 28, "Pong size");
-ENT_NET_STATIC_ASSERT(sizeof(ent_net_shard_handoff_t) == 22, "ShardHandoff size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_shard_handoff_t) == 30, "ShardHandoff size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_handoff_auth_t) == 12, "HandoffAuth size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_auth_t) == 2, "SessionAuth size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_auth_failed_t) == 4, "SessionAuthFailed size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_spawn_t) == 26, "EntitySpawn size");
@@ -390,7 +399,7 @@ ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_heartbeat_t) == 16, "IntershardH
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_enter_t) == 48, "IntershardEntityEnter size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_update_t) == 32, "IntershardEntityUpdate size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_leave_t) == 8, "IntershardEntityLeave size");
-ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_state_t) == 88, "IntershardEntityState size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_state_t) == 96, "IntershardEntityState size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_handoff_req_t) == 12, "IntershardHandoffReq size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_handoff_ack_t) == 12, "IntershardHandoffAck size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_attack_t) == 28, "IntershardAttack size");

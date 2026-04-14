@@ -24,6 +24,7 @@ pub mod msg_type {
     pub const PING: u16 = 0x0003;
     pub const PONG: u16 = 0x0004;
     pub const SHARD_HANDOFF: u16 = 0x0005;
+    pub const HANDOFF_AUTH: u16 = 0x0006;
     pub const SESSION_AUTH: u16 = 0x0007;
     pub const SESSION_AUTH_FAILED: u16 = 0x0008;
     pub const ENTITY_SPAWN: u16 = 0x0100;
@@ -208,6 +209,7 @@ pub struct ShardHandoff {
     pub new_origin_x: f32,
     pub new_origin_z: f32,
     pub handoff_tick: u32,
+    pub handoff_token: u64,
 }
 
 impl WireMessage for ShardHandoff {
@@ -219,6 +221,7 @@ impl WireMessage for ShardHandoff {
             new_origin_x: f32::from_bits(self.new_origin_x.to_bits().to_le()),
             new_origin_z: f32::from_bits(self.new_origin_z.to_bits().to_le()),
             handoff_tick: self.handoff_tick.to_le(),
+            handoff_token: self.handoff_token.to_le(),
         }
     }
     fn from_wire(self) -> Self {
@@ -229,6 +232,31 @@ impl WireMessage for ShardHandoff {
             new_origin_x: f32::from_bits(u32::from_le(self.new_origin_x.to_bits())),
             new_origin_z: f32::from_bits(u32::from_le(self.new_origin_z.to_bits())),
             handoff_tick: u32::from_le(self.handoff_tick),
+            handoff_token: u64::from_le(self.handoff_token),
+        }
+    }
+}
+
+/// Client → Server: authenticate via handoff token (skip JWT verification).
+/// Sent by clients reconnecting after a SHARD_HANDOFF.
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct HandoffAuth {
+    pub entity_id: u32,
+    pub handoff_token: u64,
+}
+
+impl WireMessage for HandoffAuth {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            handoff_token: self.handoff_token.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
+            handoff_token: u64::from_le(self.handoff_token),
         }
     }
 }
@@ -975,6 +1003,7 @@ pub struct IntershardEntityState {
     pub group_id: u32,
     pub last_sequence: u32,
     pub last_action_sequence: u32,
+    pub handoff_token: u64,
 }
 
 impl WireMessage for IntershardEntityState {
@@ -998,6 +1027,7 @@ impl WireMessage for IntershardEntityState {
             group_id: self.group_id.to_le(),
             last_sequence: self.last_sequence.to_le(),
             last_action_sequence: self.last_action_sequence.to_le(),
+            handoff_token: self.handoff_token.to_le(),
         }
     }
     fn from_wire(self) -> Self {
@@ -1020,6 +1050,7 @@ impl WireMessage for IntershardEntityState {
             group_id: u32::from_le(self.group_id),
             last_sequence: u32::from_le(self.last_sequence),
             last_action_sequence: u32::from_le(self.last_action_sequence),
+            handoff_token: u64::from_le(self.handoff_token),
         }
     }
 }
@@ -1208,7 +1239,8 @@ const _: () = assert!(core::mem::size_of::<SessionOpen>() == 28);
 const _: () = assert!(core::mem::size_of::<SessionClose>() == 1);
 const _: () = assert!(core::mem::size_of::<Ping>() == 12);
 const _: () = assert!(core::mem::size_of::<Pong>() == 28);
-const _: () = assert!(core::mem::size_of::<ShardHandoff>() == 22);
+const _: () = assert!(core::mem::size_of::<ShardHandoff>() == 30);
+const _: () = assert!(core::mem::size_of::<HandoffAuth>() == 12);
 const _: () = assert!(core::mem::size_of::<SessionAuth>() == 2);
 const _: () = assert!(core::mem::size_of::<SessionAuthFailed>() == 4);
 const _: () = assert!(core::mem::size_of::<EntitySpawn>() == 26);
@@ -1229,7 +1261,7 @@ const _: () = assert!(core::mem::size_of::<IntershardHeartbeat>() == 16);
 const _: () = assert!(core::mem::size_of::<IntershardEntityEnter>() == 48);
 const _: () = assert!(core::mem::size_of::<IntershardEntityUpdate>() == 40);
 const _: () = assert!(core::mem::size_of::<IntershardEntityLeave>() == 8);
-const _: () = assert!(core::mem::size_of::<IntershardEntityState>() == 88);
+const _: () = assert!(core::mem::size_of::<IntershardEntityState>() == 96);
 const _: () = assert!(core::mem::size_of::<IntershardHandoffReq>() == 12);
 const _: () = assert!(core::mem::size_of::<IntershardHandoffAck>() == 12);
 const _: () = assert!(core::mem::size_of::<IntershardAttack>() == 28);

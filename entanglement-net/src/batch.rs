@@ -223,3 +223,28 @@ pub fn read_session_auth_jwt(payload: &[u8]) -> Option<&str> {
     if 2 + jwt_len > payload.len() { return None; }
     core::str::from_utf8(&payload[2..2 + jwt_len]).ok()
 }
+
+/// Size of a HandoffAuth payload (entity_id: u32 + handoff_token: u64).
+pub const HANDOFF_AUTH_SIZE: usize = 12;
+
+/// Write a HandoffAuth payload: [entity_id: u32 LE][handoff_token: u64 LE].
+/// Returns the number of payload bytes written.
+pub fn write_handoff_auth(entity_id: u32, token: u64, buf: &mut [u8]) -> Result<usize, NetError> {
+    if buf.len() < HANDOFF_AUTH_SIZE {
+        return Err(NetError::BatchFull { needed: HANDOFF_AUTH_SIZE, available: buf.len() });
+    }
+    buf[0..4].copy_from_slice(&entity_id.to_le_bytes());
+    buf[4..12].copy_from_slice(&token.to_le_bytes());
+    Ok(HANDOFF_AUTH_SIZE)
+}
+
+/// Read entity_id and handoff_token from a HandoffAuth payload.
+pub fn read_handoff_auth(payload: &[u8]) -> Option<(u32, u64)> {
+    if payload.len() < HANDOFF_AUTH_SIZE { return None; }
+    let entity_id = u32::from_le_bytes([payload[0], payload[1], payload[2], payload[3]]);
+    let token = u64::from_le_bytes([
+        payload[4], payload[5], payload[6], payload[7],
+        payload[8], payload[9], payload[10], payload[11],
+    ]);
+    Some((entity_id, token))
+}

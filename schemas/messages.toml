@@ -65,6 +65,20 @@ fields = [
   { name = "new_origin_x",        type = "f32" },
   { name = "new_origin_z",        type = "f32" },
   { name = "handoff_tick",        type = "u32" },
+  { name = "handoff_token",       type = "u64" },
+]
+
+# HandoffAuth (0x0006) — client_to_server, RELIABLE channel 2
+# Sent by clients reconnecting after SHARD_HANDOFF. Skips JWT verification.
+# Fixed payload: entity_id(u32) + handoff_token(u64) = 12 bytes.
+[[message]]
+id = 0x0006
+name = "HandoffAuth"
+channel = "control"
+direction = "client_to_server"
+fields = [
+  { name = "entity_id",      type = "u32" },
+  { name = "handoff_token",  type = "u64" },
 ]
 
 # SessionAuth (0x0007) — client_to_server, RELIABLE channel 2
@@ -432,6 +446,7 @@ fields = [
   { name = "group_id",          type = "u32" },
   { name = "last_sequence",     type = "u32" },
   { name = "last_action_sequence", type = "u32" },
+  { name = "handoff_token",   type = "u64" },
 ]
 
 # Request entity ownership transfer(handoff)
