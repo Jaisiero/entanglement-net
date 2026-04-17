@@ -167,7 +167,7 @@ fn test_wire_sizes() {
     assert_eq!(core::mem::size_of::<SessionClose>(), 1);
     assert_eq!(core::mem::size_of::<Ping>(), 12);
     assert_eq!(core::mem::size_of::<Pong>(), 28);
-    assert_eq!(core::mem::size_of::<ShardHandoff>(), 22);
+    assert_eq!(core::mem::size_of::<ShardHandoff>(), 30);
     assert_eq!(core::mem::size_of::<EntitySpawn>(), 26);
     assert_eq!(core::mem::size_of::<EntityDespawn>(), 5);
     assert_eq!(core::mem::size_of::<EntityMove>(), 36);
@@ -189,7 +189,7 @@ fn test_wire_sizes() {
     assert_eq!(core::mem::size_of::<IntershardEntityEnter>(), 48);
     assert_eq!(core::mem::size_of::<IntershardEntityUpdate>(), 40);
     assert_eq!(core::mem::size_of::<IntershardEntityLeave>(), 8);
-    assert_eq!(core::mem::size_of::<IntershardEntityState>(), 88);
+    assert_eq!(core::mem::size_of::<IntershardEntityState>(), 96);
     assert_eq!(core::mem::size_of::<IntershardHandoffReq>(), 12);
     assert_eq!(core::mem::size_of::<IntershardHandoffAck>(), 12);
     assert_eq!(core::mem::size_of::<IntershardAttack>(), 28);
@@ -792,6 +792,7 @@ fn test_intershard_entity_state_f64_roundtrip() {
         group_id: 0,
         last_sequence: 0,
         last_action_sequence: 0,
+        handoff_token: 0,
     };
 
     let mut buf = [0u8; 128];
@@ -804,7 +805,7 @@ fn test_intershard_entity_state_f64_roundtrip() {
     let reader = BatchReader::new(&buf[..written]);
     let (header, payload) = reader.into_iter().next().unwrap().unwrap();
     assert_eq!(hdr_type(&header), msg_type::INTERSHARD_ENTITY_STATE);
-    assert_eq!(hdr_len(&header) as usize, 88);
+    assert_eq!(hdr_len(&header) as usize, 96);
     let msg_in: IntershardEntityState = read_msg(payload).unwrap();
     assert_eq!(msg_in, msg_out);
     // Verify f64 precision preserved (copy to avoid packed struct alignment issue)

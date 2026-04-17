@@ -70,15 +70,24 @@ fields = [
 
 # HandoffAuth (0x0006) — client_to_server, RELIABLE channel 2
 # Sent by clients reconnecting after SHARD_HANDOFF. Skips JWT verification.
-# Fixed payload: entity_id(u32) + handoff_token(u64) = 12 bytes.
+# Fixed payload: entity_id(u32) + handoff_token(u64) + client_current_sequence(u32)
+#                + client_action_sequence(u32) = 20 bytes.
+#
+# client_current_sequence / client_action_sequence carry the client's current
+# input/action sequence counters so the learner shard can seed its per-player
+# dedup state correctly (prevents input rejection after handoff).
+# Clients using the legacy 12-byte format will have the server default both
+# sequences to 0, which resets dedup on the learner.
 [[message]]
 id = 0x0006
 name = "HandoffAuth"
 channel = "control"
 direction = "client_to_server"
 fields = [
-  { name = "entity_id",      type = "u32" },
-  { name = "handoff_token",  type = "u64" },
+  { name = "entity_id",               type = "u32" },
+  { name = "handoff_token",           type = "u64" },
+  { name = "client_current_sequence", type = "u32" },
+  { name = "client_action_sequence",  type = "u32" },
 ]
 
 # SessionAuth (0x0007) — client_to_server, RELIABLE channel 2

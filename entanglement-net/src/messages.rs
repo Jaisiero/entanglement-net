@@ -239,11 +239,19 @@ impl WireMessage for ShardHandoff {
 
 /// Client → Server: authenticate via handoff token (skip JWT verification).
 /// Sent by clients reconnecting after a SHARD_HANDOFF.
+///
+/// `client_current_sequence` / `client_action_sequence` carry the client's
+/// current PlayerMove / PlayerAction sequence counters so the learner shard
+/// can seed its dedup state and accept inputs without dropping them. These
+/// were added on top of the original 12-byte payload; legacy clients sending
+/// the old 12-byte form will have both defaulted to 0 on the server side.
 #[repr(C, packed)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct HandoffAuth {
     pub entity_id: u32,
     pub handoff_token: u64,
+    pub client_current_sequence: u32,
+    pub client_action_sequence: u32,
 }
 
 impl WireMessage for HandoffAuth {
@@ -251,12 +259,16 @@ impl WireMessage for HandoffAuth {
         Self {
             entity_id: self.entity_id.to_le(),
             handoff_token: self.handoff_token.to_le(),
+            client_current_sequence: self.client_current_sequence.to_le(),
+            client_action_sequence: self.client_action_sequence.to_le(),
         }
     }
     fn from_wire(self) -> Self {
         Self {
             entity_id: u32::from_le(self.entity_id),
             handoff_token: u64::from_le(self.handoff_token),
+            client_current_sequence: u32::from_le(self.client_current_sequence),
+            client_action_sequence: u32::from_le(self.client_action_sequence),
         }
     }
 }
@@ -1240,7 +1252,7 @@ const _: () = assert!(core::mem::size_of::<SessionClose>() == 1);
 const _: () = assert!(core::mem::size_of::<Ping>() == 12);
 const _: () = assert!(core::mem::size_of::<Pong>() == 28);
 const _: () = assert!(core::mem::size_of::<ShardHandoff>() == 30);
-const _: () = assert!(core::mem::size_of::<HandoffAuth>() == 12);
+const _: () = assert!(core::mem::size_of::<HandoffAuth>() == 20);
 const _: () = assert!(core::mem::size_of::<SessionAuth>() == 2);
 const _: () = assert!(core::mem::size_of::<SessionAuthFailed>() == 4);
 const _: () = assert!(core::mem::size_of::<EntitySpawn>() == 26);

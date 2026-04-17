@@ -110,6 +110,8 @@ typedef struct {
 typedef struct {
     uint32_t entity_id;
     uint64_t handoff_token;
+    uint32_t client_current_sequence;
+    uint32_t client_action_sequence;
 } ent_net_handoff_auth_t;
 
 typedef struct {
@@ -378,7 +380,7 @@ ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_close_t) == 1, "SessionClose size")
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_ping_t) == 12, "Ping size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_pong_t) == 28, "Pong size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_shard_handoff_t) == 30, "ShardHandoff size");
-ENT_NET_STATIC_ASSERT(sizeof(ent_net_handoff_auth_t) == 12, "HandoffAuth size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_handoff_auth_t) == 20, "HandoffAuth size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_auth_t) == 2, "SessionAuth size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_auth_failed_t) == 4, "SessionAuthFailed size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_spawn_t) == 26, "EntitySpawn size");
