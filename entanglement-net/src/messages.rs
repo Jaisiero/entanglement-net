@@ -57,6 +57,9 @@ pub mod msg_type {
     pub const INTERSHARD_ATTACK: u16 = 0x0330;
     pub const INTERSHARD_HIT_RESULT: u16 = 0x0331;
     pub const INTERSHARD_COMBAT_STATE: u16 = 0x0332;
+    /// Forward a PLAYER_ACTION from old shard to new shard during handoff.
+    /// Body: entity_id (u32 LE) + raw PlayerAction bytes.
+    pub const INTERSHARD_FORWARD_ACTION: u16 = 0x0340;
 }
 
 #[repr(C, packed)]
