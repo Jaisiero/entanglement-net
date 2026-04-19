@@ -57,6 +57,7 @@
 #define ENT_NET_MSG_INTERSHARD_ENTITY_STATE 0x0313
 #define ENT_NET_MSG_INTERSHARD_HANDOFF_REQ 0x0320
 #define ENT_NET_MSG_INTERSHARD_HANDOFF_ACK 0x0321
+#define ENT_NET_MSG_INTERSHARD_HANDOFF_COMPLETE 0x0322
 #define ENT_NET_MSG_INTERSHARD_ATTACK 0x0330
 #define ENT_NET_MSG_INTERSHARD_HIT_RESULT 0x0331
 #define ENT_NET_MSG_INTERSHARD_COMBAT_STATE 0x0332
@@ -330,6 +331,11 @@ typedef struct {
 } ent_net_intershard_handoff_ack_t;
 
 typedef struct {
+    uint32_t entity_id;
+    uint64_t handoff_token;
+} ent_net_intershard_handoff_complete_t;
+
+typedef struct {
     uint32_t attacker_entity_id;
     uint32_t target_entity_id;
     uint32_t attack_sequence;
@@ -404,6 +410,7 @@ ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_leave_t) == 8, "Intershar
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_state_t) == 96, "IntershardEntityState size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_handoff_req_t) == 12, "IntershardHandoffReq size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_handoff_ack_t) == 12, "IntershardHandoffAck size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_handoff_complete_t) == 12, "IntershardHandoffComplete size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_attack_t) == 28, "IntershardAttack size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_hit_result_t) == 24, "IntershardHitResult size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_combat_state_t) == 12, "IntershardCombatState size");

@@ -54,6 +54,11 @@ pub mod msg_type {
     pub const INTERSHARD_ENTITY_UPDATE_DELTA: u16 = 0x0314;
     pub const INTERSHARD_HANDOFF_REQ: u16 = 0x0320;
     pub const INTERSHARD_HANDOFF_ACK: u16 = 0x0321;
+    /// Learner → Origin notification that the client has consumed its handoff
+    /// token (HANDOFF_AUTH or JWT fast-path matched). The origin uses this to
+    /// cancel pending SHARD_HANDOFF UDP resends early, saving grace-period
+    /// resend traffic. See `IntershardHandoffComplete`.
+    pub const INTERSHARD_HANDOFF_COMPLETE: u16 = 0x0322;
     pub const INTERSHARD_ATTACK: u16 = 0x0330;
     pub const INTERSHARD_HIT_RESULT: u16 = 0x0331;
     pub const INTERSHARD_COMBAT_STATE: u16 = 0x0332;
@@ -1129,6 +1134,33 @@ impl WireMessage for IntershardHandoffAck {
     }
 }
 
+/// Learner → Origin: client has successfully consumed its handoff token.
+/// The origin uses this to stop resending SHARD_HANDOFF during the grace
+/// period once the client has demonstrably reconnected. `handoff_token` is
+/// echoed back for defence-in-depth: cancellation is only applied when it
+/// matches the token issued at the corresponding `on_handoff_ack`.
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardHandoffComplete {
+    pub entity_id: u32,
+    pub handoff_token: u64,
+}
+
+impl WireMessage for IntershardHandoffComplete {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            handoff_token: self.handoff_token.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
+            handoff_token: u64::from_le(self.handoff_token),
+        }
+    }
+}
+
 #[repr(C, packed)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct IntershardAttack {
@@ -1279,6 +1311,7 @@ const _: () = assert!(core::mem::size_of::<IntershardEntityLeave>() == 8);
 const _: () = assert!(core::mem::size_of::<IntershardEntityState>() == 96);
 const _: () = assert!(core::mem::size_of::<IntershardHandoffReq>() == 12);
 const _: () = assert!(core::mem::size_of::<IntershardHandoffAck>() == 12);
+const _: () = assert!(core::mem::size_of::<IntershardHandoffComplete>() == 12);
 const _: () = assert!(core::mem::size_of::<IntershardAttack>() == 28);
 const _: () = assert!(core::mem::size_of::<IntershardHitResult>() == 24);
 const _: () = assert!(core::mem::size_of::<IntershardCombatState>() == 12);

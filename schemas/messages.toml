@@ -485,6 +485,24 @@ fields = [
   { name = "pad_c",     type = "u8"  },
 ]
 
+# Learner → Origin notification: the client has consumed its handoff token
+# (HANDOFF_AUTH or JWT fast-path matched). The origin can cancel pending
+# SHARD_HANDOFF UDP resends early, saving ~95% of the grace-period resend
+# traffic that would otherwise continue for up to 5 s per handoff.
+#
+# handoff_token is echoed back from IntershardEntityState for defence in depth:
+# the origin only cancels if the token matches, preventing stale/replayed
+# COMPLETE packets from affecting a subsequent (reused) entity_id handoff.
+[[message]]
+id = 0x0322
+name = "IntershardHandoffComplete"
+channel = "reliable"
+direction = "bidirectional"
+fields = [
+  { name = "entity_id",     type = "u32" },
+  { name = "handoff_token", type = "u64" },
+]
+
 # Forward attack from local player to ghost's authoritative shard
 [[message]]
 id = 0x0330
