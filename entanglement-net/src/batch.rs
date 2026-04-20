@@ -224,16 +224,16 @@ pub fn read_session_auth_jwt(payload: &[u8]) -> Option<&str> {
     core::str::from_utf8(&payload[2..2 + jwt_len]).ok()
 }
 
-/// Size of a HandoffAuth payload (v2):
+/// Size of a HandoffAuth payload:
 /// entity_id: u32 + handoff_token: u64 + client_current_sequence: u32
 /// + client_action_sequence: u32 = 20 bytes.
+///
+/// The legacy 12-byte (v1) format is no longer accepted. The C++ client
+/// generates v2 by construction — the struct has all four fields — so any
+/// 12-byte payload now indicates corruption or a probe, not an old client.
 pub const HANDOFF_AUTH_SIZE: usize = 20;
 
-/// Legacy (v1) HandoffAuth payload size (entity_id + handoff_token = 12 bytes).
-/// Kept so servers can accept legacy clients that haven't been updated yet.
-pub const HANDOFF_AUTH_SIZE_V1: usize = 12;
-
-/// Write a HandoffAuth payload (v2):
+/// Write a HandoffAuth payload:
 /// [entity_id: u32 LE][handoff_token: u64 LE]
 /// [client_current_sequence: u32 LE][client_action_sequence: u32 LE].
 /// Returns the number of payload bytes written.
@@ -254,30 +254,22 @@ pub fn write_handoff_auth(
     Ok(HANDOFF_AUTH_SIZE)
 }
 
-/// Read a HandoffAuth payload. Accepts both v1 (12 bytes, no sequences) and
-/// v2 (20 bytes, with client sequences) wire formats. For v1 payloads the two
-/// sequence fields default to 0, which makes the learner shard reset its
-/// per-player dedup state — the safe fallback behavior.
+/// Read a HandoffAuth payload. Requires exactly 20 bytes — the legacy v1
+/// (12-byte) format is no longer supported. Returns `None` on size mismatch.
 ///
 /// Returns `(entity_id, handoff_token, client_current_sequence, client_action_sequence)`.
 pub fn read_handoff_auth(payload: &[u8]) -> Option<(u32, u64, u32, u32)> {
-    if payload.len() < HANDOFF_AUTH_SIZE_V1 { return None; }
+    if payload.len() < HANDOFF_AUTH_SIZE { return None; }
     let entity_id = u32::from_le_bytes([payload[0], payload[1], payload[2], payload[3]]);
     let token = u64::from_le_bytes([
         payload[4], payload[5], payload[6], payload[7],
         payload[8], payload[9], payload[10], payload[11],
     ]);
-    if payload.len() >= HANDOFF_AUTH_SIZE {
-        let client_current_sequence = u32::from_le_bytes([
-            payload[12], payload[13], payload[14], payload[15],
-        ]);
-        let client_action_sequence = u32::from_le_bytes([
-            payload[16], payload[17], payload[18], payload[19],
-        ]);
-        Some((entity_id, token, client_current_sequence, client_action_sequence))
-    } else {
-        // v1 legacy payload — no sequences. Default to 0 so the server resets
-        // dedup on the learner shard (Fix 4 fallback).
-        Some((entity_id, token, 0, 0))
-    }
+    let client_current_sequence = u32::from_le_bytes([
+        payload[12], payload[13], payload[14], payload[15],
+    ]);
+    let client_action_sequence = u32::from_le_bytes([
+        payload[16], payload[17], payload[18], payload[19],
+    ]);
+    Some((entity_id, token, client_current_sequence, client_action_sequence))
 }
