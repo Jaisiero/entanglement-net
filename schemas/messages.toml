@@ -11,6 +11,8 @@ id = 0x0001
 name = "SessionOpen"
 channel = "control"
 direction = "server_to_client"
+# persistent_id: stable DB-level player ID, preserved across shard handoffs.
+# Added post-v1; downstream consumers rely on this field.
 fields = [
   { name = "protocol_version", type = "u16" },
   { name = "player_id",        type = "u32" },
@@ -19,6 +21,7 @@ fields = [
   { name = "origin_z",         type = "f32" },
   { name = "server_tick",      type = "u32" },
   { name = "tick_rate_hz",     type = "u16" },
+  { name = "persistent_id",    type = "u32" },
 ]
 
 [[message]]
@@ -193,6 +196,18 @@ fields = [
   { name = "vy",          type = "f32" },
   { name = "vz",          type = "f32" },
 ]
+
+# Delta-encoded entity move batch (variable-length, hand-serialised).
+# Wire: MsgHeader(6B) + server_tick(4B) + bitfield(1B) +
+#       N × (entity_id(4B) + changed_fields...)
+# All entities in one packet share the same bitfield; stride = 4 + popcount*4.
+# Codegen emits only the msg_type constant; the encoder/decoder is hand-written.
+[[message]]
+id = 0x0109
+name = "EntityMoveDeltaBatch"
+channel = "unreliable"
+direction = "server_to_client"
+raw = true
 
 [[message]]
 id = 0x0103
@@ -398,22 +413,28 @@ fields = [
   { name = "pad_c",        type = "u8"  },
 ]
 
-# Position/velocity update for ghost entity — unreliable, every tick
-# Same layout as EntityMoveCompact for cache/SIMD friendliness
+# Position/velocity update for ghost entity — unreliable, every tick.
+# hp/combat_state carry live state to the ghost on the remote shard so
+# combat HUDs and client-side prediction stay coherent.
 [[message]]
 id = 0x0311
 name = "IntershardEntityUpdate"
 channel = "unreliable"
 direction = "bidirectional"
 fields = [
-  { name = "entity_id",   type = "u32" },
-  { name = "x",           type = "f32" },
-  { name = "y",           type = "f32" },
-  { name = "z",           type = "f32" },
-  { name = "orientation", type = "f32" },
-  { name = "vx",          type = "f32" },
-  { name = "vy",          type = "f32" },
-  { name = "vz",          type = "f32" },
+  { name = "entity_id",    type = "u32" },
+  { name = "x",            type = "f32" },
+  { name = "y",            type = "f32" },
+  { name = "z",            type = "f32" },
+  { name = "orientation",  type = "f32" },
+  { name = "vx",           type = "f32" },
+  { name = "vy",           type = "f32" },
+  { name = "vz",           type = "f32" },
+  { name = "hp",           type = "u32" },
+  { name = "combat_state", type = "u8"  },
+  { name = "pad_a",        type = "u8"  },
+  { name = "pad_b",        type = "u8"  },
+  { name = "pad_c",        type = "u8"  },
 ]
 
 # Entity left boundary zone — remove ghost
@@ -429,6 +450,16 @@ fields = [
   { name = "pad_b",     type = "u8" },
   { name = "pad_c",     type = "u8" },
 ]
+
+# Delta-encoded variant of IntershardEntityUpdate (hand-serialised).
+# See `entanglement_net::delta` for the wire format.
+# Codegen emits only the msg_type constant; encoder/decoder are hand-written.
+[[message]]
+id = 0x0314
+name = "IntershardEntityUpdateDelta"
+channel = "unreliable"
+direction = "bidirectional"
+raw = true
 
 # Full entity state transfer for handoff
 [[message]]
@@ -553,3 +584,13 @@ fields = [
   { name = "state_param",  type = "u16" },
   { name = "server_tick",  type = "u32" },
 ]
+
+# Forward a PLAYER_ACTION from origin shard to learner during handoff.
+# Body: entity_id (u32 LE) + raw PlayerAction bytes.
+# Codegen emits only the msg_type constant; the payload is hand-assembled.
+[[message]]
+id = 0x0340
+name = "IntershardForwardAction"
+channel = "reliable"
+direction = "bidirectional"
+raw = true

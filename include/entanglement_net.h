@@ -40,6 +40,7 @@
 #define ENT_NET_MSG_ENTITY_MOVE 0x0102
 #define ENT_NET_MSG_ENTITY_MOVE_BATCH 0x0107
 #define ENT_NET_MSG_ENTITY_MOVE_COMPACT 0x0108
+#define ENT_NET_MSG_ENTITY_MOVE_DELTA_BATCH 0x0109
 #define ENT_NET_MSG_ENTITY_STATE 0x0103
 #define ENT_NET_MSG_ENTITY_HEALTH 0x0104
 #define ENT_NET_MSG_HIT_CONFIRM 0x0105
@@ -54,6 +55,7 @@
 #define ENT_NET_MSG_INTERSHARD_ENTITY_ENTER 0x0310
 #define ENT_NET_MSG_INTERSHARD_ENTITY_UPDATE 0x0311
 #define ENT_NET_MSG_INTERSHARD_ENTITY_LEAVE 0x0312
+#define ENT_NET_MSG_INTERSHARD_ENTITY_UPDATE_DELTA 0x0314
 #define ENT_NET_MSG_INTERSHARD_ENTITY_STATE 0x0313
 #define ENT_NET_MSG_INTERSHARD_HANDOFF_REQ 0x0320
 #define ENT_NET_MSG_INTERSHARD_HANDOFF_ACK 0x0321
@@ -61,6 +63,7 @@
 #define ENT_NET_MSG_INTERSHARD_ATTACK 0x0330
 #define ENT_NET_MSG_INTERSHARD_HIT_RESULT 0x0331
 #define ENT_NET_MSG_INTERSHARD_COMBAT_STATE 0x0332
+#define ENT_NET_MSG_INTERSHARD_FORWARD_ACTION 0x0340
 
 #pragma pack(push, 1)
 
@@ -79,6 +82,7 @@ typedef struct {
     float origin_z;
     uint32_t server_tick;
     uint16_t tick_rate_hz;
+    uint32_t persistent_id;
 } ent_net_session_open_t;
 
 typedef struct {
@@ -283,6 +287,11 @@ typedef struct {
     float vx;
     float vy;
     float vz;
+    uint32_t hp;
+    uint8_t combat_state;
+    uint8_t pad_a;
+    uint8_t pad_b;
+    uint8_t pad_c;
 } ent_net_intershard_entity_update_t;
 
 typedef struct {
@@ -381,7 +390,7 @@ typedef struct {
 #endif
 
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_msg_header_t) == 6, "MsgHeader size");
-ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_open_t) == 24, "SessionOpen size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_open_t) == 28, "SessionOpen size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_close_t) == 1, "SessionClose size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_ping_t) == 12, "Ping size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_pong_t) == 28, "Pong size");
@@ -405,7 +414,7 @@ ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_handshake_t) == 24, "IntershardH
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_handshake_ack_t) == 12, "IntershardHandshakeAck size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_heartbeat_t) == 16, "IntershardHeartbeat size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_enter_t) == 48, "IntershardEntityEnter size");
-ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_update_t) == 32, "IntershardEntityUpdate size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_update_t) == 40, "IntershardEntityUpdate size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_leave_t) == 8, "IntershardEntityLeave size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_entity_state_t) == 96, "IntershardEntityState size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_handoff_req_t) == 12, "IntershardHandoffReq size");

@@ -1,4 +1,5 @@
 pub mod messages;
+pub mod delta;
 pub mod batch;
 pub mod dispatcher;
 pub mod session;

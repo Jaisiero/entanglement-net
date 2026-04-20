@@ -28,6 +28,12 @@ struct Message {
     max_entries: u8,
     #[serde(default)]
     entry_type: Option<String>,
+    /// If true, only emit the `msg_type` constant (Rust and C) for this
+    /// message. Use for payloads whose wire format is hand-serialised
+    /// elsewhere (e.g. delta encoders, or forwarded opaque blobs). The
+    /// codegen emits no struct, no size assertion, no helpers.
+    #[serde(default)]
+    raw: bool,
 }
 
 #[derive(Deserialize)]
@@ -191,6 +197,11 @@ fn generate_rust(schema: &Schema) -> String {
 
     // Per-message output
     for msg in &schema.message {
+        if msg.raw {
+            // Raw messages: the msg_type constant was already emitted in
+            // the `msg_type` module above. No struct, no helpers.
+            continue;
+        }
         if msg.variable_length {
             let screaming = pascal_to_screaming_snake(&msg.name);
             let snake = pascal_to_snake(&msg.name);
@@ -313,14 +324,22 @@ fn generate_rust(schema: &Schema) -> String {
     // Size assertions
     out.push_str("\nconst _: () = assert!(core::mem::size_of::<MsgHeader>() == 6);\n");
     for msg in &schema.message {
-        if !msg.variable_length {
-            let expected: usize = msg.fields.iter().map(|f| type_size(&f.ty)).sum();
-            out.push_str(&format!(
-                "const _: () = assert!(core::mem::size_of::<{}>() == {});\n",
-                msg.name, expected
-            ));
+        if msg.raw || msg.variable_length {
+            continue;
         }
+        let expected: usize = msg.fields.iter().map(|f| type_size(&f.ty)).sum();
+        out.push_str(&format!(
+            "const _: () = assert!(core::mem::size_of::<{}>() == {});\n",
+            msg.name, expected
+        ));
     }
+
+    // Back-compat re-export: the delta module previously lived inside
+    // `messages::delta`. It now lives at crate root so it isn't wiped on
+    // codegen regen, but external consumers still use the old path.
+    out.push_str("\n/// Delta encoding for `IntershardEntityUpdate`. Re-exported for\n");
+    out.push_str("/// backwards compatibility — the canonical path is `crate::delta`.\n");
+    out.push_str("pub use crate::delta;\n");
 
     out
 }
@@ -389,9 +408,9 @@ fn generate_c(schema: &Schema) -> String {
     out.push_str("    uint8_t  reserved;\n");
     out.push_str("} ent_net_msg_header_t;\n\n");
 
-    // Per-message structs (skip variable-length)
+    // Per-message structs (skip variable-length and raw)
     for msg in &schema.message {
-        if msg.variable_length {
+        if msg.variable_length || msg.raw {
             continue;
         }
         let snake = pascal_to_snake(&msg.name);
@@ -422,14 +441,15 @@ fn generate_c(schema: &Schema) -> String {
     // Size assertions
     out.push_str("ENT_NET_STATIC_ASSERT(sizeof(ent_net_msg_header_t) == 6, \"MsgHeader size\");\n");
     for msg in &schema.message {
-        if !msg.variable_length {
-            let snake = pascal_to_snake(&msg.name);
-            let expected: usize = msg.fields.iter().map(|f| type_size(&f.ty)).sum();
-            out.push_str(&format!(
-                "ENT_NET_STATIC_ASSERT(sizeof(ent_net_{}_t) == {}, \"{} size\");\n",
-                snake, expected, msg.name
-            ));
+        if msg.variable_length || msg.raw {
+            continue;
         }
+        let snake = pascal_to_snake(&msg.name);
+        let expected: usize = msg.fields.iter().map(|f| type_size(&f.ty)).sum();
+        out.push_str(&format!(
+            "ENT_NET_STATIC_ASSERT(sizeof(ent_net_{}_t) == {}, \"{} size\");\n",
+            snake, expected, msg.name
+        ));
     }
     out.push('\n');
 
