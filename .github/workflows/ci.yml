@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  # Ensure committed generated files match a fresh codegen run from the schema.
+  # Without this check, a PR can modify schemas/messages.toml without
+  # regenerating entanglement-net/src/messages.rs or include/entanglement_net.h —
+  # downstream consumers (entanglement-server, mmo-shard, the C client) then
+  # disagree about the wire format. This is the hard-to-debug class of bug
+  # CRIT #1 warns about.
+  codegen-drift:
+    name: Codegen drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry & target
+        uses: Swatinem/rust-cache@v2
+
+      - name: Regenerate messages.rs and entanglement_net.h
+        run: cargo run -p entanglement-net-codegen --release
+
+      - name: Verify generated files are up to date
+        run: |
+          if ! git diff --exit-code -- entanglement-net/src/messages.rs include/entanglement_net.h; then
+            echo "::error::Generated files are out of date."
+            echo "::error::Run \`cargo run -p entanglement-net-codegen\` locally, commit the result, and push again."
+            exit 1
+          fi
+
+  build-and-test:
+    name: Build + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry & target
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build all workspace crates
+        run: cargo build --workspace --all-targets
+
+      - name: Run all tests
+        run: cargo test --workspace
