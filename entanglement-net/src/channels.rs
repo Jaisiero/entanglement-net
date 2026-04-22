@@ -28,4 +28,8 @@ pub mod session_auth_fail_reason {
     pub const EXPIRED:           u8 = 0x01;
     pub const SERVER_FULL:       u8 = 0x02;
     pub const ALREADY_CONNECTED: u8 = 0x03;
+    /// Shard is draining (merge/split in progress).
+    /// Client should re-request shard assignment via gateway rather than
+    /// retrying against this shard, since it will be evacuated shortly.
+    pub const SHARD_DRAINING:    u8 = 0x04;
 }

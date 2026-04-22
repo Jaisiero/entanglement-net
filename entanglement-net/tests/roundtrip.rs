@@ -714,6 +714,31 @@ fn test_session_auth_fail_reason_constants() {
     assert_eq!(session_auth_fail_reason::EXPIRED, 0x01);
     assert_eq!(session_auth_fail_reason::SERVER_FULL, 0x02);
     assert_eq!(session_auth_fail_reason::ALREADY_CONNECTED, 0x03);
+    assert_eq!(session_auth_fail_reason::SHARD_DRAINING, 0x04);
+}
+
+#[test]
+fn test_session_auth_failed_shard_draining_roundtrip() {
+    use entanglement_net::session_auth_fail_reason;
+
+    let msg_out = SessionAuthFailed {
+        reason: session_auth_fail_reason::SHARD_DRAINING,
+        pad_a: 0, pad_b: 0, pad_c: 0,
+    };
+
+    let mut buf = [0u8; 32];
+    let written = {
+        let mut writer = BatchWriter::new(&mut buf);
+        writer.write_msg(msg_type::SESSION_AUTH_FAILED, &msg_out).unwrap();
+        writer.bytes_written()
+    };
+
+    let reader = BatchReader::new(&buf[..written]);
+    let (header, payload) = reader.into_iter().next().unwrap().unwrap();
+    assert_eq!(hdr_type(&header), msg_type::SESSION_AUTH_FAILED);
+    assert_eq!(hdr_len(&header) as usize, 4);
+    let msg_in: SessionAuthFailed = read_msg(payload).unwrap();
+    assert_eq!(msg_in.reason, session_auth_fail_reason::SHARD_DRAINING);
 }
 
 // ─── Inter-shard message tests ───
