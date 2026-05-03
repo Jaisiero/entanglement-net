@@ -64,6 +64,11 @@
 #define ENT_NET_MSG_INTERSHARD_HIT_RESULT 0x0331
 #define ENT_NET_MSG_INTERSHARD_COMBAT_STATE 0x0332
 #define ENT_NET_MSG_INTERSHARD_FORWARD_ACTION 0x0340
+#define ENT_NET_MSG_INTERSHARD_OVERLAP_ENROL 0x0350
+#define ENT_NET_MSG_INTERSHARD_OVERLAP_SAMPLE 0x0351
+#define ENT_NET_MSG_INTERSHARD_AUTHORITY_TRANSFER 0x0352
+#define ENT_NET_MSG_INTERSHARD_AUTHORITY_ACK 0x0353
+#define ENT_NET_MSG_INTERSHARD_OVERLAP_LEAVE 0x0354
 
 #pragma pack(push, 1)
 
@@ -377,6 +382,78 @@ typedef struct {
     uint32_t server_tick;
 } ent_net_intershard_combat_state_t;
 
+typedef struct {
+    uint32_t entity_id;
+    uint32_t source_tick;
+    double x;
+    double y;
+    double z;
+    double vx;
+    double vy;
+    double vz;
+    double orientation;
+    uint32_t hp;
+    uint32_t stamina_x100;
+    uint8_t combat_state;
+    uint8_t pvp_flag;
+    uint8_t pad_a;
+    uint8_t pad_b;
+    uint32_t combat_state_param;
+    uint32_t group_id;
+    uint32_t last_sequence;
+    uint32_t last_action_sequence;
+    uint64_t overlap_token;
+} ent_net_intershard_overlap_enrol_t;
+
+typedef struct {
+    uint32_t entity_id;
+    uint32_t source_tick;
+    double x;
+    double y;
+    double z;
+    double vx;
+    double vy;
+    double vz;
+    uint32_t last_sequence;
+    uint32_t last_action_sequence;
+    uint64_t overlap_token;
+} ent_net_intershard_overlap_sample_t;
+
+typedef struct {
+    uint32_t entity_id;
+    uint32_t target_tick;
+    double x;
+    double y;
+    double z;
+    double vx;
+    double vy;
+    double vz;
+    double orientation;
+    uint32_t hp;
+    uint32_t stamina_x100;
+    uint8_t combat_state;
+    uint8_t pad_a;
+    uint8_t pad_b;
+    uint8_t pad_c;
+    uint32_t combat_state_param;
+    uint64_t overlap_token;
+} ent_net_intershard_authority_transfer_t;
+
+typedef struct {
+    uint32_t entity_id;
+    uint32_t applied_tick;
+    uint8_t ok;
+    uint8_t pad_a;
+    uint8_t pad_b;
+    uint8_t pad_c;
+    uint64_t overlap_token;
+} ent_net_intershard_authority_ack_t;
+
+typedef struct {
+    uint32_t entity_id;
+    uint64_t overlap_token;
+} ent_net_intershard_overlap_leave_t;
+
 #pragma pack(pop)
 
 #if defined(__cplusplus)
@@ -423,5 +500,10 @@ ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_handoff_complete_t) == 12, "Inte
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_attack_t) == 28, "IntershardAttack size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_hit_result_t) == 24, "IntershardHitResult size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_combat_state_t) == 12, "IntershardCombatState size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_overlap_enrol_t) == 100, "IntershardOverlapEnrol size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_overlap_sample_t) == 72, "IntershardOverlapSample size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_authority_transfer_t) == 88, "IntershardAuthorityTransfer size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_authority_ack_t) == 20, "IntershardAuthorityAck size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_overlap_leave_t) == 12, "IntershardOverlapLeave size");
 
 #endif /* ENTANGLEMENT_NET_H */

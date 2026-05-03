@@ -594,3 +594,150 @@ name = "IntershardForwardAction"
 channel = "reliable"
 direction = "bidirectional"
 raw = true
+
+# ─────────────────────────────────────────────
+# OVERLAP-HANDOFF MESSAGES (0x0350 - 0x035F)
+# ─────────────────────────────────────────────
+# Soft-handoff with continuous authority. See entanglement-server's
+# DESIGN-PLAN-A.md for the protocol design. Both peers must advertise
+# capability "overlap-v1" in their PeerHandshake (see mmo-proto's
+# intershard.proto) before they may exchange any 0x035X message.
+# Otherwise both fall back to the atomic-handoff path (0x0320..0x0322).
+
+# Sent from the shard a player is leaving toward the peer across a shared
+# edge, the moment the player crosses into the overlap band. Carries the
+# full entity state and the last-applied client input sequences so the
+# peer can begin a parallel non-authoritative physics simulation aligned
+# with the source's authoritative state.
+#
+# Field set mirrors IntershardEntityState (0x0313) with two additions:
+#   - source_tick:    the source's server_tick at the instant of capture,
+#                     so the peer can stamp its enrolment to a deterministic
+#                     starting point for sample reconciliation.
+#   - overlap_token:  unique-per-entity-per-overlap nonce. Lets the peer
+#                     reject duplicate enrols on the same edge during
+#                     resends and pair every subsequent SAMPLE / TRANSFER /
+#                     LEAVE to the right enrolment cycle.
+[[message]]
+id = 0x0350
+name = "IntershardOverlapEnrol"
+channel = "reliable"
+direction = "bidirectional"
+fields = [
+  { name = "entity_id",            type = "u32" },
+  { name = "source_tick",          type = "u32" },
+  { name = "x",                    type = "f64" },
+  { name = "y",                    type = "f64" },
+  { name = "z",                    type = "f64" },
+  { name = "vx",                   type = "f64" },
+  { name = "vy",                   type = "f64" },
+  { name = "vz",                   type = "f64" },
+  { name = "orientation",          type = "f64" },
+  { name = "hp",                   type = "u32" },
+  { name = "stamina_x100",         type = "u32" },
+  { name = "combat_state",         type = "u8"  },
+  { name = "pvp_flag",             type = "u8"  },
+  { name = "pad_a",                type = "u8"  },
+  { name = "pad_b",                type = "u8"  },
+  { name = "combat_state_param",   type = "u32" },
+  { name = "group_id",             type = "u32" },
+  { name = "last_sequence",        type = "u32" },
+  { name = "last_action_sequence", type = "u32" },
+  { name = "overlap_token",        type = "u64" },
+]
+
+# Sent every OVERLAP_SAMPLE_INTERVAL_TICKS from the current broadcast_owner
+# to the peer that's running a parallel non-authoritative sim, carrying the
+# authoritative position/velocity at `source_tick` plus the last-applied
+# input/action sequences. The peer's local sim re-anchors to this sample
+# (snap if divergence exceeds OVERLAP_DIVERGENCE_SNAP_M, soft-correct if
+# above OVERLAP_DIVERGENCE_SOFT_M).
+#
+# Unreliable channel: a dropped sample is recovered by the next one ~3
+# ticks later. The mechanism is self-healing.
+[[message]]
+id = 0x0351
+name = "IntershardOverlapSample"
+channel = "unreliable"
+direction = "bidirectional"
+fields = [
+  { name = "entity_id",            type = "u32" },
+  { name = "source_tick",          type = "u32" },
+  { name = "x",                    type = "f64" },
+  { name = "y",                    type = "f64" },
+  { name = "z",                    type = "f64" },
+  { name = "vx",                   type = "f64" },
+  { name = "vy",                   type = "f64" },
+  { name = "vz",                   type = "f64" },
+  { name = "last_sequence",        type = "u32" },
+  { name = "last_action_sequence", type = "u32" },
+  { name = "overlap_token",        type = "u64" },
+]
+
+# Sent from the current broadcast_owner to the peer at the moment the
+# authoritative position crosses the cut plane (after HANDOVER_HOLD_TICKS
+# of histeresis). Specifies the target tick at which the peer becomes the
+# new owner; the previous owner stops broadcasting EntityMove for this
+# entity from that tick (but continues simulating until ACK + STAGGER, so
+# a lost transfer doesn't strand the entity).
+#
+# Carries one final authoritative state snapshot to seed the new owner's
+# broadcast — that prevents the new owner from broadcasting a sub-frame-
+# stale position on its very first tick after handover.
+[[message]]
+id = 0x0352
+name = "IntershardAuthorityTransfer"
+channel = "reliable"
+direction = "bidirectional"
+fields = [
+  { name = "entity_id",          type = "u32" },
+  { name = "target_tick",        type = "u32" },
+  { name = "x",                  type = "f64" },
+  { name = "y",                  type = "f64" },
+  { name = "z",                  type = "f64" },
+  { name = "vx",                 type = "f64" },
+  { name = "vy",                 type = "f64" },
+  { name = "vz",                 type = "f64" },
+  { name = "orientation",        type = "f64" },
+  { name = "hp",                 type = "u32" },
+  { name = "stamina_x100",       type = "u32" },
+  { name = "combat_state",       type = "u8"  },
+  { name = "pad_a",              type = "u8"  },
+  { name = "pad_b",              type = "u8"  },
+  { name = "pad_c",              type = "u8"  },
+  { name = "combat_state_param", type = "u32" },
+  { name = "overlap_token",      type = "u64" },
+]
+
+# Confirms the new owner observed AuthorityTransfer at the agreed target
+# tick (or at applied_tick if it had to defer one tick due to local
+# scheduling). Until the previous owner sees this ACK it keeps its
+# parallel sim running so a lost transfer doesn't strand the entity.
+[[message]]
+id = 0x0353
+name = "IntershardAuthorityAck"
+channel = "reliable"
+direction = "bidirectional"
+fields = [
+  { name = "entity_id",     type = "u32" },
+  { name = "applied_tick",  type = "u32" },
+  { name = "ok",            type = "u8"  },
+  { name = "pad_a",         type = "u8"  },
+  { name = "pad_b",         type = "u8"  },
+  { name = "pad_c",         type = "u8"  },
+  { name = "overlap_token", type = "u64" },
+]
+
+# Sent from the current broadcast_owner to the peer when the entity exits
+# the overlap band on the owner's side (i.e., moved deep enough into the
+# owner's region that the peer's parallel sim is no longer needed). The
+# peer drops its parallel sim slot for this entity, freeing CPU / memory.
+[[message]]
+id = 0x0354
+name = "IntershardOverlapLeave"
+channel = "reliable"
+direction = "bidirectional"
+fields = [
+  { name = "entity_id",     type = "u32" },
+  { name = "overlap_token", type = "u64" },
+]

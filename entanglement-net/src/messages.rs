@@ -56,6 +56,11 @@ pub mod msg_type {
     pub const INTERSHARD_HIT_RESULT: u16 = 0x0331;
     pub const INTERSHARD_COMBAT_STATE: u16 = 0x0332;
     pub const INTERSHARD_FORWARD_ACTION: u16 = 0x0340;
+    pub const INTERSHARD_OVERLAP_ENROL: u16 = 0x0350;
+    pub const INTERSHARD_OVERLAP_SAMPLE: u16 = 0x0351;
+    pub const INTERSHARD_AUTHORITY_TRANSFER: u16 = 0x0352;
+    pub const INTERSHARD_AUTHORITY_ACK: u16 = 0x0353;
+    pub const INTERSHARD_OVERLAP_LEAVE: u16 = 0x0354;
 }
 
 #[repr(C, packed)]
@@ -1258,6 +1263,257 @@ impl WireMessage for IntershardCombatState {
     }
 }
 
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardOverlapEnrol {
+    pub entity_id: u32,
+    pub source_tick: u32,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub vx: f64,
+    pub vy: f64,
+    pub vz: f64,
+    pub orientation: f64,
+    pub hp: u32,
+    pub stamina_x100: u32,
+    pub combat_state: u8,
+    pub pvp_flag: u8,
+    pub pad_a: u8,
+    pub pad_b: u8,
+    pub combat_state_param: u32,
+    pub group_id: u32,
+    pub last_sequence: u32,
+    pub last_action_sequence: u32,
+    pub overlap_token: u64,
+}
+
+impl WireMessage for IntershardOverlapEnrol {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            source_tick: self.source_tick.to_le(),
+            x: f64::from_bits(self.x.to_bits().to_le()),
+            y: f64::from_bits(self.y.to_bits().to_le()),
+            z: f64::from_bits(self.z.to_bits().to_le()),
+            vx: f64::from_bits(self.vx.to_bits().to_le()),
+            vy: f64::from_bits(self.vy.to_bits().to_le()),
+            vz: f64::from_bits(self.vz.to_bits().to_le()),
+            orientation: f64::from_bits(self.orientation.to_bits().to_le()),
+            hp: self.hp.to_le(),
+            stamina_x100: self.stamina_x100.to_le(),
+            combat_state: self.combat_state,
+            pvp_flag: self.pvp_flag,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            combat_state_param: self.combat_state_param.to_le(),
+            group_id: self.group_id.to_le(),
+            last_sequence: self.last_sequence.to_le(),
+            last_action_sequence: self.last_action_sequence.to_le(),
+            overlap_token: self.overlap_token.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
+            source_tick: u32::from_le(self.source_tick),
+            x: f64::from_bits(u64::from_le(self.x.to_bits())),
+            y: f64::from_bits(u64::from_le(self.y.to_bits())),
+            z: f64::from_bits(u64::from_le(self.z.to_bits())),
+            vx: f64::from_bits(u64::from_le(self.vx.to_bits())),
+            vy: f64::from_bits(u64::from_le(self.vy.to_bits())),
+            vz: f64::from_bits(u64::from_le(self.vz.to_bits())),
+            orientation: f64::from_bits(u64::from_le(self.orientation.to_bits())),
+            hp: u32::from_le(self.hp),
+            stamina_x100: u32::from_le(self.stamina_x100),
+            combat_state: self.combat_state,
+            pvp_flag: self.pvp_flag,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            combat_state_param: u32::from_le(self.combat_state_param),
+            group_id: u32::from_le(self.group_id),
+            last_sequence: u32::from_le(self.last_sequence),
+            last_action_sequence: u32::from_le(self.last_action_sequence),
+            overlap_token: u64::from_le(self.overlap_token),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardOverlapSample {
+    pub entity_id: u32,
+    pub source_tick: u32,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub vx: f64,
+    pub vy: f64,
+    pub vz: f64,
+    pub last_sequence: u32,
+    pub last_action_sequence: u32,
+    pub overlap_token: u64,
+}
+
+impl WireMessage for IntershardOverlapSample {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            source_tick: self.source_tick.to_le(),
+            x: f64::from_bits(self.x.to_bits().to_le()),
+            y: f64::from_bits(self.y.to_bits().to_le()),
+            z: f64::from_bits(self.z.to_bits().to_le()),
+            vx: f64::from_bits(self.vx.to_bits().to_le()),
+            vy: f64::from_bits(self.vy.to_bits().to_le()),
+            vz: f64::from_bits(self.vz.to_bits().to_le()),
+            last_sequence: self.last_sequence.to_le(),
+            last_action_sequence: self.last_action_sequence.to_le(),
+            overlap_token: self.overlap_token.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
+            source_tick: u32::from_le(self.source_tick),
+            x: f64::from_bits(u64::from_le(self.x.to_bits())),
+            y: f64::from_bits(u64::from_le(self.y.to_bits())),
+            z: f64::from_bits(u64::from_le(self.z.to_bits())),
+            vx: f64::from_bits(u64::from_le(self.vx.to_bits())),
+            vy: f64::from_bits(u64::from_le(self.vy.to_bits())),
+            vz: f64::from_bits(u64::from_le(self.vz.to_bits())),
+            last_sequence: u32::from_le(self.last_sequence),
+            last_action_sequence: u32::from_le(self.last_action_sequence),
+            overlap_token: u64::from_le(self.overlap_token),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardAuthorityTransfer {
+    pub entity_id: u32,
+    pub target_tick: u32,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub vx: f64,
+    pub vy: f64,
+    pub vz: f64,
+    pub orientation: f64,
+    pub hp: u32,
+    pub stamina_x100: u32,
+    pub combat_state: u8,
+    pub pad_a: u8,
+    pub pad_b: u8,
+    pub pad_c: u8,
+    pub combat_state_param: u32,
+    pub overlap_token: u64,
+}
+
+impl WireMessage for IntershardAuthorityTransfer {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            target_tick: self.target_tick.to_le(),
+            x: f64::from_bits(self.x.to_bits().to_le()),
+            y: f64::from_bits(self.y.to_bits().to_le()),
+            z: f64::from_bits(self.z.to_bits().to_le()),
+            vx: f64::from_bits(self.vx.to_bits().to_le()),
+            vy: f64::from_bits(self.vy.to_bits().to_le()),
+            vz: f64::from_bits(self.vz.to_bits().to_le()),
+            orientation: f64::from_bits(self.orientation.to_bits().to_le()),
+            hp: self.hp.to_le(),
+            stamina_x100: self.stamina_x100.to_le(),
+            combat_state: self.combat_state,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+            combat_state_param: self.combat_state_param.to_le(),
+            overlap_token: self.overlap_token.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
+            target_tick: u32::from_le(self.target_tick),
+            x: f64::from_bits(u64::from_le(self.x.to_bits())),
+            y: f64::from_bits(u64::from_le(self.y.to_bits())),
+            z: f64::from_bits(u64::from_le(self.z.to_bits())),
+            vx: f64::from_bits(u64::from_le(self.vx.to_bits())),
+            vy: f64::from_bits(u64::from_le(self.vy.to_bits())),
+            vz: f64::from_bits(u64::from_le(self.vz.to_bits())),
+            orientation: f64::from_bits(u64::from_le(self.orientation.to_bits())),
+            hp: u32::from_le(self.hp),
+            stamina_x100: u32::from_le(self.stamina_x100),
+            combat_state: self.combat_state,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+            combat_state_param: u32::from_le(self.combat_state_param),
+            overlap_token: u64::from_le(self.overlap_token),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardAuthorityAck {
+    pub entity_id: u32,
+    pub applied_tick: u32,
+    pub ok: u8,
+    pub pad_a: u8,
+    pub pad_b: u8,
+    pub pad_c: u8,
+    pub overlap_token: u64,
+}
+
+impl WireMessage for IntershardAuthorityAck {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            applied_tick: self.applied_tick.to_le(),
+            ok: self.ok,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+            overlap_token: self.overlap_token.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
+            applied_tick: u32::from_le(self.applied_tick),
+            ok: self.ok,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+            overlap_token: u64::from_le(self.overlap_token),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct IntershardOverlapLeave {
+    pub entity_id: u32,
+    pub overlap_token: u64,
+}
+
+impl WireMessage for IntershardOverlapLeave {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            overlap_token: self.overlap_token.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
+            overlap_token: u64::from_le(self.overlap_token),
+        }
+    }
+}
+
 const _: () = assert!(core::mem::size_of::<MsgHeader>() == 6);
 const _: () = assert!(core::mem::size_of::<SessionOpen>() == 28);
 const _: () = assert!(core::mem::size_of::<SessionClose>() == 1);
@@ -1292,6 +1548,11 @@ const _: () = assert!(core::mem::size_of::<IntershardHandoffComplete>() == 12);
 const _: () = assert!(core::mem::size_of::<IntershardAttack>() == 28);
 const _: () = assert!(core::mem::size_of::<IntershardHitResult>() == 24);
 const _: () = assert!(core::mem::size_of::<IntershardCombatState>() == 12);
+const _: () = assert!(core::mem::size_of::<IntershardOverlapEnrol>() == 100);
+const _: () = assert!(core::mem::size_of::<IntershardOverlapSample>() == 72);
+const _: () = assert!(core::mem::size_of::<IntershardAuthorityTransfer>() == 88);
+const _: () = assert!(core::mem::size_of::<IntershardAuthorityAck>() == 20);
+const _: () = assert!(core::mem::size_of::<IntershardOverlapLeave>() == 12);
 
 /// Delta encoding for `IntershardEntityUpdate`. Re-exported for
 /// backwards compatibility — the canonical path is `crate::delta`.
