@@ -465,6 +465,13 @@ pub struct EntityMoveCompact {
     pub vx: f32,
     pub vy: f32,
     pub vz: f32,
+    /// Same semantics as [`EntityMove::source_shard_hash`]: FNV-1a
+    /// hash of the shard whose authority is broadcasting this entity.
+    /// Carried in the per-tick compact broadcast (the hot path for the
+    /// viewer's per-frame entity feed) so the ring colour stays
+    /// accurate every tick instead of only on rare full-format
+    /// EntityMove unicasts.
+    pub source_shard_hash: u32,
 }
 
 impl WireMessage for EntityMoveCompact {
@@ -478,6 +485,7 @@ impl WireMessage for EntityMoveCompact {
             vx: f32::from_bits(self.vx.to_bits().to_le()),
             vy: f32::from_bits(self.vy.to_bits().to_le()),
             vz: f32::from_bits(self.vz.to_bits().to_le()),
+            source_shard_hash: self.source_shard_hash.to_le(),
         }
     }
     fn from_wire(self) -> Self {
@@ -490,6 +498,7 @@ impl WireMessage for EntityMoveCompact {
             vx: f32::from_bits(u32::from_le(self.vx.to_bits())),
             vy: f32::from_bits(u32::from_le(self.vy.to_bits())),
             vz: f32::from_bits(u32::from_le(self.vz.to_bits())),
+            source_shard_hash: u32::from_le(self.source_shard_hash),
         }
     }
 }
@@ -1548,7 +1557,8 @@ const _: () = assert!(core::mem::size_of::<EntityDespawn>() == 5);
 // instead of inferring from `(x, z)` ↔ region geometry).
 const _: () = assert!(core::mem::size_of::<EntityMove>() == 40);
 const _: () = assert!(core::mem::size_of::<EntityMoveBatch>() == 4);
-const _: () = assert!(core::mem::size_of::<EntityMoveCompact>() == 32);
+// Bumped from 32 to 36 when `source_shard_hash: u32` was appended.
+const _: () = assert!(core::mem::size_of::<EntityMoveCompact>() == 36);
 const _: () = assert!(core::mem::size_of::<EntityState>() == 18);
 const _: () = assert!(core::mem::size_of::<EntityHealth>() == 12);
 const _: () = assert!(core::mem::size_of::<HitConfirm>() == 20);
