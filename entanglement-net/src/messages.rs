@@ -386,6 +386,22 @@ pub struct EntityMove {
     pub vx: f32,
     pub vy: f32,
     pub vz: f32,
+    /// FNV-1a hash of the shard_id string (`peer::shard_id_hash`) of
+    /// the shard that currently holds broadcast authority over this
+    /// entity. The sending shard fills this in for every entity it
+    /// broadcasts:
+    ///   - Local entities (this shard's authority): own shard_id_hash.
+    ///   - Forwarded ghosts (received via INTERSHARD_GHOST_ZONE from
+    ///     a neighbour): the source shard's hash, propagated through
+    ///     the ghost record.
+    /// Receivers (notably the viewer) use this to colour-code each
+    /// entity by its true authority owner instead of inferring it
+    /// from `(x, z)` ↔ region geometry — which lies whenever a
+    /// handoff is mid-flight or has failed silently.
+    /// 0 means "unknown" (older sender that hasn't been upgraded yet,
+    /// or a path that lost the source shard ID en route); receivers
+    /// fall back to their previous behaviour for that case.
+    pub source_shard_hash: u32,
 }
 
 impl WireMessage for EntityMove {
@@ -400,6 +416,7 @@ impl WireMessage for EntityMove {
             vx: f32::from_bits(self.vx.to_bits().to_le()),
             vy: f32::from_bits(self.vy.to_bits().to_le()),
             vz: f32::from_bits(self.vz.to_bits().to_le()),
+            source_shard_hash: self.source_shard_hash.to_le(),
         }
     }
     fn from_wire(self) -> Self {
@@ -413,6 +430,7 @@ impl WireMessage for EntityMove {
             vx: f32::from_bits(u32::from_le(self.vx.to_bits())),
             vy: f32::from_bits(u32::from_le(self.vy.to_bits())),
             vz: f32::from_bits(u32::from_le(self.vz.to_bits())),
+            source_shard_hash: u32::from_le(self.source_shard_hash),
         }
     }
 }
@@ -1525,7 +1543,10 @@ const _: () = assert!(core::mem::size_of::<SessionAuth>() == 2);
 const _: () = assert!(core::mem::size_of::<SessionAuthFailed>() == 4);
 const _: () = assert!(core::mem::size_of::<EntitySpawn>() == 26);
 const _: () = assert!(core::mem::size_of::<EntityDespawn>() == 5);
-const _: () = assert!(core::mem::size_of::<EntityMove>() == 36);
+// Bumped from 36 to 40 when `source_shard_hash: u32` was appended
+// (Phase 4 Option A v2 — viewer ring colours by true authority owner
+// instead of inferring from `(x, z)` ↔ region geometry).
+const _: () = assert!(core::mem::size_of::<EntityMove>() == 40);
 const _: () = assert!(core::mem::size_of::<EntityMoveBatch>() == 4);
 const _: () = assert!(core::mem::size_of::<EntityMoveCompact>() == 32);
 const _: () = assert!(core::mem::size_of::<EntityState>() == 18);
