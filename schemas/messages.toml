@@ -165,11 +165,17 @@ fields = [
   { name = "vx",          type = "f32" },
   { name = "vy",          type = "f32" },
   { name = "vz",          type = "f32" },
+  # FNV-1a hash of the broadcasting shard's `shard_id`. Receivers
+  # (notably mmo-viewer) colour-code each entity by its authoritative
+  # shard so authority transitions are legible the same tick the wire
+  # reports them, instead of inferring from `(x, z)` ↔ region overlap.
+  # 0 means "unknown" — older sender that hasn't been upgraded yet.
+  { name = "source_shard_hash", type = "u32" },
 ]
 
 # Batch of compact entity moves sharing a single server_tick.
 # Packet layout: [MsgHeader][EntityMoveBatch.server_tick][EntityMoveCompact × N]
-# MsgHeader.msg_length = 4 + N × 32
+# MsgHeader.msg_length = 4 + N × 36
 [[message]]
 id = 0x0107
 name = "EntityMoveBatch"
@@ -180,7 +186,8 @@ fields = [
 ]
 
 # Compact entity move — no per-entity header or server_tick.
-# 32 bytes (= one AVX2 register). Used inside EntityMoveBatch.
+# 36 bytes (was 32 / one AVX2 register before `source_shard_hash`
+# was appended). Used inside EntityMoveBatch.
 [[message]]
 id = 0x0108
 name = "EntityMoveCompact"
@@ -195,6 +202,10 @@ fields = [
   { name = "vx",          type = "f32" },
   { name = "vy",          type = "f32" },
   { name = "vz",          type = "f32" },
+  # Same semantics as EntityMove.source_shard_hash. Carried in the
+  # per-tick compact path (the hot route for the viewer's entity
+  # feed), so the ring colour stays accurate every tick.
+  { name = "source_shard_hash", type = "u32" },
 ]
 
 # Delta-encoded entity move batch (variable-length, hand-serialised).

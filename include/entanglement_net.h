@@ -160,6 +160,7 @@ typedef struct {
     float vx;
     float vy;
     float vz;
+    uint32_t source_shard_hash;
 } ent_net_entity_move_t;
 
 typedef struct {
@@ -175,6 +176,7 @@ typedef struct {
     float vx;
     float vy;
     float vz;
+    uint32_t source_shard_hash;
 } ent_net_entity_move_compact_t;
 
 typedef struct {
@@ -477,9 +479,9 @@ ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_auth_t) == 2, "SessionAuth size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_auth_failed_t) == 4, "SessionAuthFailed size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_spawn_t) == 26, "EntitySpawn size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_despawn_t) == 5, "EntityDespawn size");
-ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_move_t) == 36, "EntityMove size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_move_t) == 40, "EntityMove size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_move_batch_t) == 4, "EntityMoveBatch size");
-ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_move_compact_t) == 32, "EntityMoveCompact size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_move_compact_t) == 36, "EntityMoveCompact size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_state_t) == 18, "EntityState size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_health_t) == 12, "EntityHealth size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_hit_confirm_t) == 20, "HitConfirm size");
