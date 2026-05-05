@@ -21,6 +21,7 @@ fn test_entity_move_roundtrip() {
         vx: 5.0,
         vy: 0.0,
         vz: -3.0,
+        source_shard_hash: 0xDEADBEEF,
     };
 
     let mut buf = [0u8; 512];
@@ -77,6 +78,7 @@ fn test_batch_multiple_messages() {
             entity_id: 1, server_tick: 100,
             x: 0.0, y: 0.0, z: 0.0, orientation: 0.0,
             vx: 0.0, vy: 0.0, vz: 0.0,
+            source_shard_hash: 0,
         };
         let mut count = 0;
         while writer.write_msg(msg_type::ENTITY_MOVE, &msg).is_ok() {
@@ -85,8 +87,11 @@ fn test_batch_multiple_messages() {
         (count, writer.bytes_written())
     };
 
-    // EntityMove = 36 bytes + 6 header = 42 each; 1154 / 42 = 27
-    assert!(count >= 27, "Expected >=27 messages, got {count}");
+    // EntityMove = 40 bytes + 6 header = 46 each; 1154 / 46 = 25
+    // (was 27 when EntityMove was 36 bytes; bumped here when
+    // source_shard_hash u32 was appended for the viewer's per-shard
+    // ring colouring).
+    assert!(count >= 25, "Expected >=25 messages, got {count}");
 
     let reader = BatchReader::new(&buf[..written]);
     let read_count = reader.filter_map(|r| r.ok()).count();
@@ -108,6 +113,7 @@ fn test_mixed_batch() {
         entity_id: 10, server_tick: 1,
         x: 51.0, y: 0.0, z: -30.0, orientation: 0.1,
         vx: 1.0, vy: 0.0, vz: 0.0,
+        source_shard_hash: 0,
     };
     writer.write_msg(msg_type::ENTITY_MOVE, &mv).unwrap();
 
@@ -170,7 +176,7 @@ fn test_wire_sizes() {
     assert_eq!(core::mem::size_of::<ShardHandoff>(), 30);
     assert_eq!(core::mem::size_of::<EntitySpawn>(), 26);
     assert_eq!(core::mem::size_of::<EntityDespawn>(), 5);
-    assert_eq!(core::mem::size_of::<EntityMove>(), 36);
+    assert_eq!(core::mem::size_of::<EntityMove>(), 40);
     assert_eq!(core::mem::size_of::<EntityState>(), 18);
     assert_eq!(core::mem::size_of::<EntityHealth>(), 12);
     assert_eq!(core::mem::size_of::<HitConfirm>(), 20);
@@ -179,7 +185,7 @@ fn test_wire_sizes() {
     assert_eq!(core::mem::size_of::<PlayerAction>(), 20);
     assert_eq!(core::mem::size_of::<StateAck>(), 44);
     assert_eq!(core::mem::size_of::<EntityMoveBatch>(), 4);
-    assert_eq!(core::mem::size_of::<EntityMoveCompact>(), 32);
+    assert_eq!(core::mem::size_of::<EntityMoveCompact>(), 36);
     assert_eq!(core::mem::size_of::<SessionAuth>(), 2);
     assert_eq!(core::mem::size_of::<SessionAuthFailed>(), 4);
     // Inter-shard messages (0x0300+)
@@ -205,6 +211,7 @@ fn test_batch_full_error() {
         entity_id: 1, server_tick: 1,
         x: 0.0, y: 0.0, z: 0.0, orientation: 0.0,
         vx: 0.0, vy: 0.0, vz: 0.0,
+        source_shard_hash: 0,
     };
     assert!(writer.write_msg(msg_type::ENTITY_MOVE, &msg).is_err());
 }
@@ -256,6 +263,7 @@ fn test_dispatcher_routes_messages() {
             entity_id: 1, server_tick: 1,
             x: 0.0, y: 0.0, z: 0.0, orientation: 0.0,
             vx: 0.0, vy: 0.0, vz: 0.0,
+            source_shard_hash: 0,
         };
         for _ in 0..3 {
             writer.write_msg(msg_type::ENTITY_MOVE, &msg).unwrap();
@@ -343,6 +351,7 @@ fn test_wire_format_float_le() {
         entity_id: 1, server_tick: 2,
         x: 1.0, y: 0.0, z: 0.0, orientation: 0.0,
         vx: 0.0, vy: 0.0, vz: 0.0,
+        source_shard_hash: 0,
     };
 
     let mut buf = [0u8; 64];
