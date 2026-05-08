@@ -35,6 +35,9 @@
 #define ENT_NET_MSG_HANDOFF_AUTH 0x0006
 #define ENT_NET_MSG_SESSION_AUTH 0x0007
 #define ENT_NET_MSG_SESSION_AUTH_FAILED 0x0008
+#define ENT_NET_MSG_SUBSCRIBE_REGION 0x0009
+#define ENT_NET_MSG_UNSUBSCRIBE_REGION 0x000a
+#define ENT_NET_MSG_SUBSCRIBE_ACK 0x000b
 #define ENT_NET_MSG_ENTITY_SPAWN 0x0100
 #define ENT_NET_MSG_ENTITY_DESPAWN 0x0101
 #define ENT_NET_MSG_ENTITY_MOVE 0x0102
@@ -134,6 +137,22 @@ typedef struct {
     uint8_t pad_b;
     uint8_t pad_c;
 } ent_net_session_auth_failed_t;
+
+typedef struct {
+    double interest_x;
+    double interest_z;
+    double interest_radius;
+} ent_net_subscribe_region_t;
+
+typedef struct {
+} ent_net_unsubscribe_region_t;
+
+typedef struct {
+    uint8_t ok;
+    uint8_t reason;
+    uint8_t pad_a;
+    uint8_t pad_b;
+} ent_net_subscribe_ack_t;
 
 typedef struct {
     uint32_t entity_id;
@@ -477,6 +496,9 @@ ENT_NET_STATIC_ASSERT(sizeof(ent_net_shard_handoff_t) == 30, "ShardHandoff size"
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_handoff_auth_t) == 20, "HandoffAuth size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_auth_t) == 2, "SessionAuth size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_session_auth_failed_t) == 4, "SessionAuthFailed size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_subscribe_region_t) == 24, "SubscribeRegion size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_unsubscribe_region_t) == 0, "UnsubscribeRegion size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_subscribe_ack_t) == 4, "SubscribeAck size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_spawn_t) == 26, "EntitySpawn size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_despawn_t) == 5, "EntityDespawn size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_entity_move_t) == 40, "EntityMove size");

@@ -27,6 +27,9 @@ pub mod msg_type {
     pub const HANDOFF_AUTH: u16 = 0x0006;
     pub const SESSION_AUTH: u16 = 0x0007;
     pub const SESSION_AUTH_FAILED: u16 = 0x0008;
+    pub const SUBSCRIBE_REGION: u16 = 0x0009;
+    pub const UNSUBSCRIBE_REGION: u16 = 0x000a;
+    pub const SUBSCRIBE_ACK: u16 = 0x000b;
     pub const ENTITY_SPAWN: u16 = 0x0100;
     pub const ENTITY_DESPAWN: u16 = 0x0101;
     pub const ENTITY_MOVE: u16 = 0x0102;
@@ -311,6 +314,75 @@ impl WireMessage for SessionAuthFailed {
             pad_a: self.pad_a,
             pad_b: self.pad_b,
             pad_c: self.pad_c,
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SubscribeRegion {
+    pub interest_x: f64,
+    pub interest_z: f64,
+    pub interest_radius: f64,
+}
+
+impl WireMessage for SubscribeRegion {
+    fn to_wire(self) -> Self {
+        Self {
+            interest_x: f64::from_bits(self.interest_x.to_bits().to_le()),
+            interest_z: f64::from_bits(self.interest_z.to_bits().to_le()),
+            interest_radius: f64::from_bits(self.interest_radius.to_bits().to_le()),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            interest_x: f64::from_bits(u64::from_le(self.interest_x.to_bits())),
+            interest_z: f64::from_bits(u64::from_le(self.interest_z.to_bits())),
+            interest_radius: f64::from_bits(u64::from_le(self.interest_radius.to_bits())),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct UnsubscribeRegion {
+}
+
+impl WireMessage for UnsubscribeRegion {
+    fn to_wire(self) -> Self {
+        Self {
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SubscribeAck {
+    pub ok: u8,
+    pub reason: u8,
+    pub pad_a: u8,
+    pub pad_b: u8,
+}
+
+impl WireMessage for SubscribeAck {
+    fn to_wire(self) -> Self {
+        Self {
+            ok: self.ok,
+            reason: self.reason,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            ok: self.ok,
+            reason: self.reason,
+            pad_a: self.pad_a,
+            pad_b: self.pad_b,
         }
     }
 }
@@ -1529,6 +1601,9 @@ const _: () = assert!(core::mem::size_of::<ShardHandoff>() == 30);
 const _: () = assert!(core::mem::size_of::<HandoffAuth>() == 20);
 const _: () = assert!(core::mem::size_of::<SessionAuth>() == 2);
 const _: () = assert!(core::mem::size_of::<SessionAuthFailed>() == 4);
+const _: () = assert!(core::mem::size_of::<SubscribeRegion>() == 24);
+const _: () = assert!(core::mem::size_of::<UnsubscribeRegion>() == 0);
+const _: () = assert!(core::mem::size_of::<SubscribeAck>() == 4);
 const _: () = assert!(core::mem::size_of::<EntitySpawn>() == 26);
 const _: () = assert!(core::mem::size_of::<EntityDespawn>() == 5);
 const _: () = assert!(core::mem::size_of::<EntityMove>() == 40);

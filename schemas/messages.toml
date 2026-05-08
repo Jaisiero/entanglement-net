@@ -121,6 +121,63 @@ fields = [
   { name = "pad_c",  type = "u8"  },
 ]
 
+# SubscribeRegion (0x0009) — client_to_server, RELIABLE channel 2
+# Phase 1 of multi-shard subscription. Registers an interest center on
+# this shard for the sender's UDP endpoint. The shard then includes the
+# sender in its EntityMove broadcasts for any entity within
+# `interest_radius` of `(interest_x, interest_z)`. Used in two ways:
+#
+#   1. As an additional interest area on the client's primary shard
+#      (e.g., look-ahead radius beyond the player's local zone).
+#   2. As a subscription on a *peer* shard the client is not playing on
+#      directly — required to receive broadcasts during Plan A overlap
+#      windows without reconnecting on every authority transfer.
+#
+# Authentication: the sender's UDP endpoint must already have an
+# authenticated session on this shard (via SessionAuth or HandoffAuth).
+# A subscription without a session is rejected with `reason=0x01`.
+[[message]]
+id = 0x0009
+name = "SubscribeRegion"
+channel = "reliable"
+direction = "client_to_server"
+fields = [
+  { name = "interest_x",      type = "f64" },
+  { name = "interest_z",      type = "f64" },
+  { name = "interest_radius", type = "f64" },
+]
+
+# UnsubscribeRegion (0x000A) — client_to_server, RELIABLE channel 2
+# Removes the sender's subscription on this shard. The shard stops
+# including the sender in EntityMove broadcasts. Idempotent — sending
+# UnsubscribeRegion without a prior SubscribeRegion is a no-op.
+# No body — the sender's UDP endpoint identifies which subscription
+# to remove.
+[[message]]
+id = 0x000A
+name = "UnsubscribeRegion"
+channel = "reliable"
+direction = "client_to_server"
+fields = []
+
+# SubscribeAck (0x000B) — server_to_client, RELIABLE channel 2
+# Server response to SubscribeRegion. ok=1 indicates the subscription
+# is active; ok=0 indicates rejection (see reason). reason codes:
+#   0x00 = NoActiveSession   (client hasn't authenticated)
+#   0x01 = InvalidRegion     (interest_x/z/radius non-finite or radius<=0)
+#   0x02 = SubscriptionLimit (this shard has too many subscribers; back off)
+[[message]]
+id = 0x000B
+name = "SubscribeAck"
+channel = "reliable"
+direction = "server_to_client"
+fields = [
+  { name = "ok",     type = "u8" },
+  { name = "reason", type = "u8" },
+  { name = "pad_a",  type = "u8" },
+  { name = "pad_b",  type = "u8" },
+]
+
 # ─────────────────────────────────────────────
 # ENTITY MESSAGES (0x0100 - 0x01FF)
 # ─────────────────────────────────────────────
