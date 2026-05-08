@@ -225,6 +225,51 @@ fields = [
   { name = "handoff_token",      type = "u64" },
 ]
 
+# Multishard subscription Phase 5 step 4 — proactive neighbor
+# discovery. Server emits this right after SessionOpen, listing
+# up to 4 neighbor shards from the local PeerManager. The client
+# uses this to open peer subscriptions BEFORE its first boundary
+# crossing — eliminating the Phase 4 first-handoff swap gap (a
+# bot connecting fresh has no peer until it experiences a real
+# crossing, so its first crossing always falls back to legacy
+# SHARD_HANDOFF reconnect).
+#
+# Why fixed-size 4 inline neighbors rather than variable-length:
+# the wire codegen doesn't model variable arrays, and the cluster
+# rarely exceeds 4 simultaneous neighbors in practice. Empty
+# slots are signaled by `nN_shard_id == 0`.
+#
+# `neighbor_count`: number of populated slots (0..=4). Slots
+# above this index are zero-padded.
+[[message]]
+id = 0x000D
+name = "NeighborAdvisory"
+channel = "reliable"
+direction = "server_to_client"
+fields = [
+  { name = "neighbor_count", type = "u32" },
+  # Slot 0
+  { name = "n0_shard_id",    type = "u32" },
+  { name = "n0_ip_packed",   type = "u32" },
+  { name = "n0_port",        type = "u16" },
+  { name = "n0_pad",         type = "u16" },
+  # Slot 1
+  { name = "n1_shard_id",    type = "u32" },
+  { name = "n1_ip_packed",   type = "u32" },
+  { name = "n1_port",        type = "u16" },
+  { name = "n1_pad",         type = "u16" },
+  # Slot 2
+  { name = "n2_shard_id",    type = "u32" },
+  { name = "n2_ip_packed",   type = "u32" },
+  { name = "n2_port",        type = "u16" },
+  { name = "n2_pad",         type = "u16" },
+  # Slot 3
+  { name = "n3_shard_id",    type = "u32" },
+  { name = "n3_ip_packed",   type = "u32" },
+  { name = "n3_port",        type = "u16" },
+  { name = "n3_pad",         type = "u16" },
+]
+
 # ─────────────────────────────────────────────
 # ENTITY MESSAGES (0x0100 - 0x01FF)
 # ─────────────────────────────────────────────

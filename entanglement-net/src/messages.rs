@@ -31,6 +31,7 @@ pub mod msg_type {
     pub const UNSUBSCRIBE_REGION: u16 = 0x000a;
     pub const SUBSCRIBE_ACK: u16 = 0x000b;
     pub const AUTHORITY_NOTICE: u16 = 0x000c;
+    pub const NEIGHBOR_ADVISORY: u16 = 0x000d;
     pub const ENTITY_SPAWN: u16 = 0x0100;
     pub const ENTITY_DESPAWN: u16 = 0x0101;
     pub const ENTITY_MOVE: u16 = 0x0102;
@@ -412,6 +413,73 @@ impl WireMessage for AuthorityNotice {
             new_owner_shard_id: u32::from_le(self.new_owner_shard_id),
             effective_tick: u32::from_le(self.effective_tick),
             handoff_token: u64::from_le(self.handoff_token),
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NeighborAdvisory {
+    pub neighbor_count: u32,
+    pub n0_shard_id: u32,
+    pub n0_ip_packed: u32,
+    pub n0_port: u16,
+    pub n0_pad: u16,
+    pub n1_shard_id: u32,
+    pub n1_ip_packed: u32,
+    pub n1_port: u16,
+    pub n1_pad: u16,
+    pub n2_shard_id: u32,
+    pub n2_ip_packed: u32,
+    pub n2_port: u16,
+    pub n2_pad: u16,
+    pub n3_shard_id: u32,
+    pub n3_ip_packed: u32,
+    pub n3_port: u16,
+    pub n3_pad: u16,
+}
+
+impl WireMessage for NeighborAdvisory {
+    fn to_wire(self) -> Self {
+        Self {
+            neighbor_count: self.neighbor_count.to_le(),
+            n0_shard_id: self.n0_shard_id.to_le(),
+            n0_ip_packed: self.n0_ip_packed.to_le(),
+            n0_port: self.n0_port.to_le(),
+            n0_pad: self.n0_pad.to_le(),
+            n1_shard_id: self.n1_shard_id.to_le(),
+            n1_ip_packed: self.n1_ip_packed.to_le(),
+            n1_port: self.n1_port.to_le(),
+            n1_pad: self.n1_pad.to_le(),
+            n2_shard_id: self.n2_shard_id.to_le(),
+            n2_ip_packed: self.n2_ip_packed.to_le(),
+            n2_port: self.n2_port.to_le(),
+            n2_pad: self.n2_pad.to_le(),
+            n3_shard_id: self.n3_shard_id.to_le(),
+            n3_ip_packed: self.n3_ip_packed.to_le(),
+            n3_port: self.n3_port.to_le(),
+            n3_pad: self.n3_pad.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            neighbor_count: u32::from_le(self.neighbor_count),
+            n0_shard_id: u32::from_le(self.n0_shard_id),
+            n0_ip_packed: u32::from_le(self.n0_ip_packed),
+            n0_port: u16::from_le(self.n0_port),
+            n0_pad: u16::from_le(self.n0_pad),
+            n1_shard_id: u32::from_le(self.n1_shard_id),
+            n1_ip_packed: u32::from_le(self.n1_ip_packed),
+            n1_port: u16::from_le(self.n1_port),
+            n1_pad: u16::from_le(self.n1_pad),
+            n2_shard_id: u32::from_le(self.n2_shard_id),
+            n2_ip_packed: u32::from_le(self.n2_ip_packed),
+            n2_port: u16::from_le(self.n2_port),
+            n2_pad: u16::from_le(self.n2_pad),
+            n3_shard_id: u32::from_le(self.n3_shard_id),
+            n3_ip_packed: u32::from_le(self.n3_ip_packed),
+            n3_port: u16::from_le(self.n3_port),
+            n3_pad: u16::from_le(self.n3_pad),
         }
     }
 }
@@ -1634,6 +1702,7 @@ const _: () = assert!(core::mem::size_of::<SubscribeRegion>() == 24);
 const _: () = assert!(core::mem::size_of::<UnsubscribeRegion>() == 0);
 const _: () = assert!(core::mem::size_of::<SubscribeAck>() == 4);
 const _: () = assert!(core::mem::size_of::<AuthorityNotice>() == 20);
+const _: () = assert!(core::mem::size_of::<NeighborAdvisory>() == 52);
 const _: () = assert!(core::mem::size_of::<EntitySpawn>() == 26);
 const _: () = assert!(core::mem::size_of::<EntityDespawn>() == 5);
 const _: () = assert!(core::mem::size_of::<EntityMove>() == 40);
