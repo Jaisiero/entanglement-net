@@ -178,6 +178,53 @@ fields = [
   { name = "pad_b",  type = "u8" },
 ]
 
+# Multishard subscription Phase 4 — keystone message that lets a
+# client receive an authority transfer notification WITHOUT tearing
+# down its UDP transport.
+#
+# Sent server→client to every endpoint subscribed to the entity's
+# region (via the `SubscriptionRegistry`) at the moment authority
+# transfers from one shard to another. The previous mechanism
+# (SHARD_HANDOFF) was sent only to the entity-owning client and
+# required them to close their UDP socket and reconnect; that
+# 50-150 ms reconnect window was the visible "cut" at boundary
+# crossings.
+#
+# AUTHORITY_NOTICE replaces SHARD_HANDOFF in the steady-state Plan A
+# overlap path. The receiving client:
+#   1. Updates `authoritative_shard_for_entity[entity_id]
+#      = new_owner_shard_id` so subsequent PlayerMove for that
+#      entity is routed to the new owner.
+#   2. If `entity_id == player_id` (it's the receiver's own
+#      entity), promotes its already-open peer subscription on the
+#      new owner shard to "primary" status (sends HANDOFF_AUTH on
+#      the existing socket) instead of opening a new one. The old
+#      primary becomes the new peer until its broadcasts go silent.
+#   3. Never disconnects.
+#
+# `effective_tick` is the server tick at which the new owner's
+# broadcasts begin. Clients should accept EntityMove from the old
+# owner up to (effective_tick - 1) and switch their authority
+# tracking on (effective_tick) — useful for ordering when the wire
+# is loose-ordered (UDP).
+#
+# `handoff_token` carries the same skip-auth credential
+# SHARD_HANDOFF used to carry. Without it the new owner would have
+# to require a fresh JWT round-trip via SessionAuth, which would
+# add latency. Single-shot — server-side `expected_handoffs`
+# consumes it on the matching HANDOFF_AUTH.
+[[message]]
+id = 0x000C
+name = "AuthorityNotice"
+channel = "reliable"
+direction = "server_to_client"
+fields = [
+  { name = "entity_id",          type = "u32" },
+  { name = "new_owner_shard_id", type = "u32" },
+  { name = "effective_tick",     type = "u32" },
+  { name = "handoff_token",      type = "u64" },
+]
+
 # ─────────────────────────────────────────────
 # ENTITY MESSAGES (0x0100 - 0x01FF)
 # ─────────────────────────────────────────────

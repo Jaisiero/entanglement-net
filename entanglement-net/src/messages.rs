@@ -30,6 +30,7 @@ pub mod msg_type {
     pub const SUBSCRIBE_REGION: u16 = 0x0009;
     pub const UNSUBSCRIBE_REGION: u16 = 0x000a;
     pub const SUBSCRIBE_ACK: u16 = 0x000b;
+    pub const AUTHORITY_NOTICE: u16 = 0x000c;
     pub const ENTITY_SPAWN: u16 = 0x0100;
     pub const ENTITY_DESPAWN: u16 = 0x0101;
     pub const ENTITY_MOVE: u16 = 0x0102;
@@ -383,6 +384,34 @@ impl WireMessage for SubscribeAck {
             reason: self.reason,
             pad_a: self.pad_a,
             pad_b: self.pad_b,
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AuthorityNotice {
+    pub entity_id: u32,
+    pub new_owner_shard_id: u32,
+    pub effective_tick: u32,
+    pub handoff_token: u64,
+}
+
+impl WireMessage for AuthorityNotice {
+    fn to_wire(self) -> Self {
+        Self {
+            entity_id: self.entity_id.to_le(),
+            new_owner_shard_id: self.new_owner_shard_id.to_le(),
+            effective_tick: self.effective_tick.to_le(),
+            handoff_token: self.handoff_token.to_le(),
+        }
+    }
+    fn from_wire(self) -> Self {
+        Self {
+            entity_id: u32::from_le(self.entity_id),
+            new_owner_shard_id: u32::from_le(self.new_owner_shard_id),
+            effective_tick: u32::from_le(self.effective_tick),
+            handoff_token: u64::from_le(self.handoff_token),
         }
     }
 }
@@ -1604,6 +1633,7 @@ const _: () = assert!(core::mem::size_of::<SessionAuthFailed>() == 4);
 const _: () = assert!(core::mem::size_of::<SubscribeRegion>() == 24);
 const _: () = assert!(core::mem::size_of::<UnsubscribeRegion>() == 0);
 const _: () = assert!(core::mem::size_of::<SubscribeAck>() == 4);
+const _: () = assert!(core::mem::size_of::<AuthorityNotice>() == 20);
 const _: () = assert!(core::mem::size_of::<EntitySpawn>() == 26);
 const _: () = assert!(core::mem::size_of::<EntityDespawn>() == 5);
 const _: () = assert!(core::mem::size_of::<EntityMove>() == 40);
