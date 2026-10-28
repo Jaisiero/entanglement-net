@@ -1431,6 +1431,14 @@ pub struct IntershardOverlapSample {
     pub last_sequence: u32,
     pub last_action_sequence: u32,
     pub overlap_token: u64,
+    pub hp: u32,
+    pub stamina_x100: u32,
+    pub combat_state: u8,
+    pub vitals_valid: u8,
+    pub pad_b: u8,
+    pub pad_c: u8,
+    pub combat_state_param: u32,
+    pub action_seq_applied: u32,
 }
 
 impl WireMessage for IntershardOverlapSample {
@@ -1447,6 +1455,14 @@ impl WireMessage for IntershardOverlapSample {
             last_sequence: self.last_sequence.to_le(),
             last_action_sequence: self.last_action_sequence.to_le(),
             overlap_token: self.overlap_token.to_le(),
+            hp: self.hp.to_le(),
+            stamina_x100: self.stamina_x100.to_le(),
+            combat_state: self.combat_state,
+            vitals_valid: self.vitals_valid,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+            combat_state_param: self.combat_state_param.to_le(),
+            action_seq_applied: self.action_seq_applied.to_le(),
         }
     }
     fn from_wire(self) -> Self {
@@ -1462,6 +1478,14 @@ impl WireMessage for IntershardOverlapSample {
             last_sequence: u32::from_le(self.last_sequence),
             last_action_sequence: u32::from_le(self.last_action_sequence),
             overlap_token: u64::from_le(self.overlap_token),
+            hp: u32::from_le(self.hp),
+            stamina_x100: u32::from_le(self.stamina_x100),
+            combat_state: self.combat_state,
+            vitals_valid: self.vitals_valid,
+            pad_b: self.pad_b,
+            pad_c: self.pad_c,
+            combat_state_param: u32::from_le(self.combat_state_param),
+            action_seq_applied: u32::from_le(self.action_seq_applied),
         }
     }
 }
@@ -1630,7 +1654,7 @@ const _: () = assert!(core::mem::size_of::<IntershardAttack>() == 28);
 const _: () = assert!(core::mem::size_of::<IntershardHitResult>() == 24);
 const _: () = assert!(core::mem::size_of::<IntershardCombatState>() == 12);
 const _: () = assert!(core::mem::size_of::<IntershardOverlapEnrol>() == 100);
-const _: () = assert!(core::mem::size_of::<IntershardOverlapSample>() == 72);
+const _: () = assert!(core::mem::size_of::<IntershardOverlapSample>() == 92);
 const _: () = assert!(core::mem::size_of::<IntershardAuthorityTransfer>() == 88);
 const _: () = assert!(core::mem::size_of::<IntershardAuthorityAck>() == 20);
 const _: () = assert!(core::mem::size_of::<IntershardOverlapLeave>() == 12);
