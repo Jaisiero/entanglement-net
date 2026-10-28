@@ -723,6 +723,16 @@ fields = [
 #
 # Unreliable channel: a dropped sample is recovered by the next one ~3
 # ticks later. The mechanism is self-healing.
+#
+# Vitales (hp .. action_seq_applied, anadidos al final): el estado del
+# dueno que la sombra no simula, porque solo el dueno cobra golpes. Durante
+# un relevo la sombra sirve el StateAck del cliente, y sin ellos el hp y la
+# stamina que ve el cliente eran los del ENROL. `vitals_valid` = el emisor es
+# dueno (copia propia) al construirlo; un SAMPLE de 72 B de una version
+# anterior se lee con vitals_valid = 0. `action_seq_applied`: la mayor
+# secuencia de accion que el dueno ha aplicado (propia o reenviada); la
+# sombra solo adopta la stamina si el dueno ya aplico sus acciones, para no
+# devolverle el coste de un ataque que el dueno aun no ha recibido.
 [[message]]
 id = 0x0351
 name = "IntershardOverlapSample"
@@ -740,6 +750,14 @@ fields = [
   { name = "last_sequence",        type = "u32" },
   { name = "last_action_sequence", type = "u32" },
   { name = "overlap_token",        type = "u64" },
+  { name = "hp",                   type = "u32" },
+  { name = "stamina_x100",         type = "u32" },
+  { name = "combat_state",         type = "u8"  },
+  { name = "vitals_valid",         type = "u8"  },
+  { name = "pad_b",                type = "u8"  },
+  { name = "pad_c",                type = "u8"  },
+  { name = "combat_state_param",   type = "u32" },
+  { name = "action_seq_applied",   type = "u32" },
 ]
 
 # Sent from the current broadcast_owner to the peer at the moment the

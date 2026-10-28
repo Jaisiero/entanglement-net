@@ -438,6 +438,14 @@ typedef struct {
     uint32_t last_sequence;
     uint32_t last_action_sequence;
     uint64_t overlap_token;
+    uint32_t hp;
+    uint32_t stamina_x100;
+    uint8_t combat_state;
+    uint8_t vitals_valid;
+    uint8_t pad_b;
+    uint8_t pad_c;
+    uint32_t combat_state_param;
+    uint32_t action_seq_applied;
 } ent_net_intershard_overlap_sample_t;
 
 typedef struct {
@@ -525,7 +533,7 @@ ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_attack_t) == 28, "IntershardAtta
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_hit_result_t) == 24, "IntershardHitResult size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_combat_state_t) == 12, "IntershardCombatState size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_overlap_enrol_t) == 100, "IntershardOverlapEnrol size");
-ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_overlap_sample_t) == 72, "IntershardOverlapSample size");
+ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_overlap_sample_t) == 92, "IntershardOverlapSample size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_authority_transfer_t) == 88, "IntershardAuthorityTransfer size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_authority_ack_t) == 20, "IntershardAuthorityAck size");
 ENT_NET_STATIC_ASSERT(sizeof(ent_net_intershard_overlap_leave_t) == 12, "IntershardOverlapLeave size");
