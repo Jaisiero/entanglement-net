@@ -724,15 +724,15 @@ fields = [
 # Unreliable channel: a dropped sample is recovered by the next one ~3
 # ticks later. The mechanism is self-healing.
 #
-# Vitales (hp .. action_seq_applied, anadidos al final): el estado del
-# dueno que la sombra no simula, porque solo el dueno cobra golpes. Durante
-# un relevo la sombra sirve el StateAck del cliente, y sin ellos el hp y la
-# stamina que ve el cliente eran los del ENROL. `vitals_valid` = el emisor es
-# dueno (copia propia) al construirlo; un SAMPLE de 72 B de una version
-# anterior se lee con vitals_valid = 0. `action_seq_applied`: la mayor
-# secuencia de accion que el dueno ha aplicado (propia o reenviada); la
-# sombra solo adopta la stamina si el dueno ya aplico sus acciones, para no
-# devolverle el coste de un ataque que el dueno aun no ha recibido.
+# Vitals (hp .. action_seq_applied, appended at the end): the owner's
+# state that the shadow does not simulate, because only the owner lands hits.
+# During a relay the shadow serves the client's StateAck, and without them
+# the hp and stamina the client saw were the ENROL ones. `vitals_valid` = the
+# sender was the owner (own copy) when building it; a 72 B SAMPLE from an older
+# version is read with vitals_valid = 0. `action_seq_applied`: the highest
+# action sequence the owner has applied (own or forwarded); the shadow
+# only adopts the stamina once the owner has applied its actions, so as not
+# to refund the cost of an attack the owner has not received yet.
 [[message]]
 id = 0x0351
 name = "IntershardOverlapSample"
@@ -762,7 +762,7 @@ fields = [
 
 # Sent from the current broadcast_owner to the peer at the moment the
 # authoritative position crosses the cut plane (after HANDOVER_HOLD_TICKS
-# of histeresis). Specifies the target tick at which the peer becomes the
+# of hysteresis). Specifies the target tick at which the peer becomes the
 # new owner; the previous owner stops broadcasting EntityMove for this
 # entity from that tick (but continues simulating until ACK + STAGGER, so
 # a lost transfer doesn't strand the entity).
